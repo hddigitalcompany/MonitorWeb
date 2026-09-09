@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  ::selection {
+    background-color: theme("colors.amber.DEFAULT");
+    color: theme("colors.base");
+  }
+
+  :focus-visible {
+    outline: 2px solid theme("colors.amber.DEFAULT");
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-sm border border-border bg-surface p-6;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-sm bg-amber px-4 py-2.5 text-sm font-medium text-base transition-colors hover:bg-amber-soft disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-sm border border-border bg-transparent px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-surface2;
+  }
+
+  .field-label {
+    @apply mb-1.5 block text-sm text-muted;
+  }
+
+  .field-input {
+    @apply w-full rounded-sm border border-border bg-surface2 px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:border-amber;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
