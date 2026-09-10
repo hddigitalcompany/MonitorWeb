@@ -3,9 +3,11 @@ import PageHeader from "@/components/PageHeader";
 import AtalhosInicio from "@/components/AtalhosInicio";
 import { Play } from "lucide-react";
 import { extrairIdYoutube } from "@/lib/youtube";
+import { buscarTextos, texto } from "@/lib/textos";
 
 export default async function InicioPage() {
   const supabase = createClient();
+  const textos = await buscarTextos(supabase);
 
   const { data: videos } = await supabase
     .from("conteudo_video_dia")
@@ -18,7 +20,7 @@ export default async function InicioPage() {
 
   return (
     <div>
-      <PageHeader title="Início" subtitle="Bom te ver por aqui." />
+      <PageHeader title={texto(textos, "inicio_titulo")} subtitle={texto(textos, "inicio_subtitulo")} />
 
       <p className="mb-2 text-xs text-muted">Vídeo do dia</p>
       {video ? (

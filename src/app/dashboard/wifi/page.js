@@ -1,8 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/PageHeader";
+import { buscarTextos, texto } from "@/lib/textos";
 
 export default async function WifiPage() {
   const supabase = createClient();
+  const textos = await buscarTextos(supabase);
   const { data: dicas } = await supabase
     .from("conteudo_wifi_dicas")
     .select("*")
@@ -10,7 +12,7 @@ export default async function WifiPage() {
 
   return (
     <div>
-      <PageHeader title="Wifi" subtitle="Dicas de segurança em redes públicas." />
+      <PageHeader title={texto(textos, "wifi_titulo")} subtitle={texto(textos, "wifi_subtitulo")} />
       {!dicas || dicas.length === 0 ? (
         <p className="text-sm text-muted">Nenhuma dica publicada ainda.</p>
       ) : (

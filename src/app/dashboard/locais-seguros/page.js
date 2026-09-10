@@ -1,8 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/PageHeader";
+import { buscarTextos, texto } from "@/lib/textos";
 
 export default async function LocaisSegurosPage() {
   const supabase = createClient();
+  const textos = await buscarTextos(supabase);
   const { data: itens } = await supabase
     .from("conteudo_locais")
     .select("*")
@@ -10,7 +12,7 @@ export default async function LocaisSegurosPage() {
 
   return (
     <div>
-      <PageHeader title="Locais seguros" subtitle="Sugestões de lugares na região." />
+      <PageHeader title={texto(textos, "locais_titulo")} subtitle={texto(textos, "locais_subtitulo")} />
       {!itens || itens.length === 0 ? (
         <p className="text-sm text-muted">Nenhuma sugestão publicada ainda.</p>
       ) : (

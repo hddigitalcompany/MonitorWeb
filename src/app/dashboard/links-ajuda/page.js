@@ -1,8 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/PageHeader";
+import { buscarTextos, texto } from "@/lib/textos";
 
 export default async function LinksAjudaPage() {
   const supabase = createClient();
+  const textos = await buscarTextos(supabase);
   const { data: itens } = await supabase
     .from("conteudo_links")
     .select("*")
@@ -10,7 +12,7 @@ export default async function LinksAjudaPage() {
 
   return (
     <div>
-      <PageHeader title="Links de ajuda" subtitle="Conteúdos úteis selecionados." />
+      <PageHeader title={texto(textos, "links_titulo")} subtitle={texto(textos, "links_subtitulo")} />
       {!itens || itens.length === 0 ? (
         <p className="text-sm text-muted">Nenhum link publicado ainda.</p>
       ) : (

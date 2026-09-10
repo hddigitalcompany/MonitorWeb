@@ -1,8 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/PageHeader";
+import { buscarTextos, texto } from "@/lib/textos";
 
 export default async function LembretesPage() {
   const supabase = createClient();
+  const textos = await buscarTextos(supabase);
   const { data } = await supabase
     .from("conteudo_lembretes")
     .select("*")
@@ -17,7 +19,7 @@ export default async function LembretesPage() {
 
   return (
     <div>
-      <PageHeader title="Lembretes" subtitle="Lembretes de ligar pra alguém importante." />
+      <PageHeader title={texto(textos, "lembretes_titulo")} subtitle={texto(textos, "lembretes_subtitulo")} />
       {itens.length === 0 ? (
         <p className="text-sm text-muted">Nenhum lembrete publicado ainda.</p>
       ) : (

@@ -77,6 +77,14 @@ create table if not exists public.conteudo_contatos (
   criado_em timestamptz not null default now()
 );
 
+-- Textos/títulos editáveis do app (chave ex: "inicio_titulo", "inicio_subtitulo").
+-- Se uma chave não existir aqui, o app usa o texto padrão definido em src/lib/textos.js.
+create table if not exists public.conteudo_textos (
+  chave text primary key,
+  valor text not null,
+  criado_em timestamptz not null default now()
+);
+
 -- Ativa RLS em todas as tabelas de conteúdo
 alter table public.conteudo_fotos enable row level security;
 alter table public.conteudo_video_dia enable row level security;
@@ -85,6 +93,7 @@ alter table public.conteudo_lembretes enable row level security;
 alter table public.conteudo_links enable row level security;
 alter table public.conteudo_wifi_dicas enable row level security;
 alter table public.conteudo_contatos enable row level security;
+alter table public.conteudo_textos enable row level security;
 
 -- Qualquer pessoa logada pode ler; só admin pode escrever.
 -- (repete o mesmo par de políticas pra cada tabela de conteúdo)
@@ -95,7 +104,7 @@ begin
   foreach tabela in array array[
     'conteudo_fotos', 'conteudo_video_dia', 'conteudo_locais',
     'conteudo_lembretes', 'conteudo_links', 'conteudo_wifi_dicas',
-    'conteudo_contatos'
+    'conteudo_contatos', 'conteudo_textos'
   ]
   loop
     execute format(

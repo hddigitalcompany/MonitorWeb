@@ -29,7 +29,7 @@ export default async function AdminPage() {
     );
   }
 
-  const [fotos, videos, locais, lembretes, links, wifiDicas, contatos, chamados] = await Promise.all([
+  const [fotos, videos, locais, lembretes, links, wifiDicas, contatos, textos, chamados] = await Promise.all([
     supabase.from("conteudo_fotos").select("*").order("criado_em", { ascending: false }),
     supabase.from("conteudo_video_dia").select("*").order("criado_em", { ascending: false }),
     supabase.from("conteudo_locais").select("*").order("criado_em", { ascending: false }),
@@ -37,6 +37,7 @@ export default async function AdminPage() {
     supabase.from("conteudo_links").select("*").order("criado_em", { ascending: false }),
     supabase.from("conteudo_wifi_dicas").select("*").order("criado_em", { ascending: false }),
     supabase.from("conteudo_contatos").select("*").order("criado_em", { ascending: false }),
+    supabase.from("conteudo_textos").select("*"),
     supabase
       .from("chamados_suporte")
       .select("*, mensagens_suporte(*)")
@@ -53,6 +54,7 @@ export default async function AdminPage() {
         links: links.data || [],
         wifiDicas: wifiDicas.data || [],
         contatos: contatos.data || [],
+        textos: textos.data || [],
         chamados: chamados.data || [],
       }}
     />

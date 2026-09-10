@@ -1,9 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/PageHeader";
 import Suporte from "@/components/Suporte";
+import { buscarTextos, texto } from "@/lib/textos";
 
 export default async function SuportePage() {
   const supabase = createClient();
+  const textos = await buscarTextos(supabase);
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -16,7 +18,7 @@ export default async function SuportePage() {
 
   return (
     <div>
-      <PageHeader title="Suporte" subtitle="Abra um chamado ou continue uma conversa." />
+      <PageHeader title={texto(textos, "suporte_titulo")} subtitle={texto(textos, "suporte_subtitulo")} />
       <Suporte chamadosIniciais={chamados || []} userId={user.id} />
     </div>
   );

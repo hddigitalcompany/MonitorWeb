@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Trash2, Upload, Send, ArrowLeft } from "lucide-react";
 import { extrairIdYoutube } from "@/lib/youtube";
+import { TEXTOS_PADRAO } from "@/lib/textos";
 
 const SECOES = [
   { id: "video", label: "Vídeo do dia" },
@@ -14,6 +15,7 @@ const SECOES = [
   { id: "wifi", label: "Wifi" },
   { id: "contatos", label: "Contatos úteis" },
   { id: "suporte", label: "Suporte" },
+  { id: "textos", label: "Textos" },
 ];
 
 export default function AdminDashboard({ dadosIniciais }) {
@@ -48,6 +50,7 @@ export default function AdminDashboard({ dadosIniciais }) {
       {secao === "wifi" && <SecaoWifi itens={dadosIniciais.wifiDicas} />}
       {secao === "contatos" && <SecaoContatos itens={dadosIniciais.contatos} />}
       {secao === "suporte" && <SecaoSuporte chamadosIniciais={dadosIniciais.chamados} />}
+      {secao === "textos" && <SecaoTextos itens={dadosIniciais.textos} />}
     </div>
   );
 }
@@ -616,6 +619,102 @@ function SecaoSuporte({ chamadosIniciais }) {
           <p className="truncate text-xs text-muted">{c.mensagens[c.mensagens.length - 1]?.texto}</p>
         </button>
       ))}
+    </div>
+  );
+}
+
+
+const GRUPOS_TEXTOS = [
+  { titulo: "Início", campos: [["inicio_titulo", "Título"], ["inicio_subtitulo", "Subtítulo"]] },
+  { titulo: "Fotos", campos: [["fotos_titulo", "Título"], ["fotos_subtitulo", "Subtítulo"]] },
+  { titulo: "Locais seguros", campos: [["locais_titulo", "Título"], ["locais_subtitulo", "Subtítulo"]] },
+  { titulo: "Lembretes", campos: [["lembretes_titulo", "Título"], ["lembretes_subtitulo", "Subtítulo"]] },
+  { titulo: "Links de ajuda", campos: [["links_titulo", "Título"], ["links_subtitulo", "Subtítulo"]] },
+  { titulo: "Wifi", campos: [["wifi_titulo", "Título"], ["wifi_subtitulo", "Subtítulo"]] },
+  { titulo: "Contatos úteis", campos: [["contatos_titulo", "Título"], ["contatos_subtitulo", "Subtítulo"]] },
+  { titulo: "Suporte", campos: [["suporte_titulo", "Título"], ["suporte_subtitulo", "Subtítulo"]] },
+  { titulo: "Conversas", campos: [["conversas_titulo", "Título"], ["conversas_subtitulo", "Subtítulo"]] },
+  { titulo: "Assinatura", campos: [["assinatura_titulo", "Título"]] },
+];
+
+function SecaoTextos({ itens }) {
+  const mapa = {};
+  itens.forEach((t) => {
+    mapa[t.chave] = t.valor;
+  });
+
+  return (
+    <div>
+      <p className="mb-4 text-xs text-muted">
+        Clique em qualquer texto pra editar. Salva sozinho assim que você sai do campo.
+      </p>
+      {GRUPOS_TEXTOS.map((grupo) => (
+        <div key={grupo.titulo} className="card mb-4">
+          <p className="mb-2 text-sm text-ink">{grupo.titulo}</p>
+          {grupo.campos.map(([chave, label]) => (
+            <TextoEditavel
+              key={chave}
+              chave={chave}
+              label={label}
+              valorInicial={mapa[chave] ?? TEXTOS_PADRAO[chave] ?? ""}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TextoEditavel({ chave, label, valorInicial }) {
+  const [salvo, setSalvo] = useState(valorInicial);
+  const [valor, setValor] = useState(valorInicial);
+  const [editando, setEditando] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const supabase = createClient();
+
+  async function salvar() {
+    setEditando(false);
+    const novo = valor.trim();
+    if (!novo || novo === salvo) {
+      setValor(salvo);
+      return;
+    }
+    setSalvando(true);
+    const { error } = await supabase.from("conteudo_textos").upsert({ chave, valor: novo });
+    if (!error) {
+      setSalvo(novo);
+    } else {
+      setValor(salvo);
+    }
+    setSalvando(false);
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-border py-2.5 last:border-b-0">
+      <p className="w-20 shrink-0 text-xs text-muted">{label}</p>
+      {editando ? (
+        <input
+          autoFocus
+          value={valor}
+          onChange={(e) => setValor(e.target.value)}
+          onBlur={salvar}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.target.blur();
+            if (e.key === "Escape") {
+              setValor(salvo);
+              setEditando(false);
+            }
+          }}
+          className="field-input flex-1"
+        />
+      ) : (
+        <button
+          onClick={() => setEditando(true)}
+          className="flex-1 truncate text-left text-sm text-ink hover:text-amber"
+        >
+          {salvando ? "Salvando..." : salvo}
+        </button>
+      )}
     </div>
   );
 }

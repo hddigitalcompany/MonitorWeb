@@ -1,8 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/PageHeader";
+import { buscarTextos, texto } from "@/lib/textos";
 
 export default async function ContatosPage() {
   const supabase = createClient();
+  const textos = await buscarTextos(supabase);
   const { data: contatos } = await supabase
     .from("conteudo_contatos")
     .select("*")
@@ -10,7 +12,7 @@ export default async function ContatosPage() {
 
   return (
     <div>
-      <PageHeader title="Contatos úteis" subtitle="Serviços que podem ser úteis no dia a dia." />
+      <PageHeader title={texto(textos, "contatos_titulo")} subtitle={texto(textos, "contatos_subtitulo")} />
       {!contatos || contatos.length === 0 ? (
         <p className="text-sm text-muted">Nenhum contato publicado ainda.</p>
       ) : (

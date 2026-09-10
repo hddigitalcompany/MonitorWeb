@@ -1,8 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/PageHeader";
+import { buscarTextos, texto } from "@/lib/textos";
 
 export default async function FotosPage() {
   const supabase = createClient();
+  const textos = await buscarTextos(supabase);
   const { data: fotos } = await supabase
     .from("conteudo_fotos")
     .select("*")
@@ -10,7 +12,7 @@ export default async function FotosPage() {
 
   return (
     <div>
-      <PageHeader title="Fotos" subtitle="Fotos motivacionais selecionadas pra você." />
+      <PageHeader title={texto(textos, "fotos_titulo")} subtitle={texto(textos, "fotos_subtitulo")} />
       {!fotos || fotos.length === 0 ? (
         <p className="text-sm text-muted">Nenhuma foto publicada ainda.</p>
       ) : (

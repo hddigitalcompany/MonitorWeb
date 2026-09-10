@@ -1,9 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/PageHeader";
 import ImportarConversas from "@/components/ImportarConversas";
+import { buscarTextos, texto } from "@/lib/textos";
 
 export default async function ConversasPage() {
   const supabase = createClient();
+  const textos = await buscarTextos(supabase);
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -16,7 +18,7 @@ export default async function ConversasPage() {
 
   return (
     <div>
-      <PageHeader title="Conversas" subtitle="Importe, se você quiser, organizadas por pessoa." />
+      <PageHeader title={texto(textos, "conversas_titulo")} subtitle={texto(textos, "conversas_subtitulo")} />
       <ImportarConversas conversasIniciais={conversas || []} userId={user.id} />
     </div>
   );
