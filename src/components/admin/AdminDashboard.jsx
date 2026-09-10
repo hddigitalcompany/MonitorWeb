@@ -220,10 +220,22 @@ function SecaoLembretes({ itens: itensIniciais }) {
     return a.hora.localeCompare(b.hora);
   }
 
+  function formatarHora(valor) {
+    const limpo = (valor || "").trim();
+    if (!limpo) return null;
+    if (/^\d{3,4}$/.test(limpo)) {
+      const minutos = limpo.slice(-2);
+      const horas = limpo.slice(0, -2).padStart(2, "0");
+      return `${horas}:${minutos}`;
+    }
+    return limpo;
+  }
+
   async function adicionar() {
     const partes = linha.split(",").map((p) => p.trim());
-    const [hora, lembrete, ...resto] = partes;
+    const [horaBruta, lembrete, ...resto] = partes;
     if (!lembrete) return;
+    const hora = formatarHora(horaBruta);
     const atividade = resto.join(", ").trim();
     const { data: novo } = await supabase
       .from("conteudo_lembretes")
