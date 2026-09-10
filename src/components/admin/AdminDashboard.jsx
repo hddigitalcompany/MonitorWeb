@@ -36,7 +36,7 @@ export default function AdminDashboard({ dadosIniciais }) {
             key={s.id}
             onClick={() => setSecao(s.id)}
             className={`rounded-sm px-3 py-1.5 text-xs ${
-              secao === s.id ? "bg-amber text-base" : "border border-border text-muted"
+              secao === s.id ? "bg-amber text-ink" : "border border-border text-muted"
             }`}
           >
             {s.label}
@@ -602,7 +602,7 @@ function SecaoSuporte({ chamadosIniciais }) {
         <div className="mb-4 flex flex-col gap-2.5">
           {chamado.mensagens.map((m) => (
             <div key={m.id} className={`flex ${m.remetente === "suporte" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[78%] rounded-sm px-3 py-2 text-sm leading-relaxed ${m.remetente === "suporte" ? "bg-amber text-base" : "border border-border bg-surface text-ink"}`}>
+              <div className={`max-w-[78%] rounded-sm px-3 py-2 text-sm leading-relaxed ${m.remetente === "suporte" ? "bg-amber text-ink" : "border border-border bg-surface text-ink"}`}>
                 {m.texto}
               </div>
             </div>

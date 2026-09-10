@@ -138,15 +138,15 @@ function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex shrink-0 overflow-x-auto border-t border-border bg-surface">
+    <nav className="flex shrink-0 gap-1 overflow-x-auto border-t border-border bg-surface px-2 py-2">
       {ABAS.map(({ href, label, icon: Icon }) => {
         const ativo = pathname === href;
         return (
           <Link
             key={href}
             href={href}
-            className={`flex min-w-[52px] flex-1 flex-col items-center gap-1 py-2.5 text-[10px] transition-colors ${
-              ativo ? "text-amber" : "text-muted"
+            className={`flex min-w-[56px] flex-1 flex-col items-center gap-1 rounded-md py-2 text-[10px] transition-colors ${
+              ativo ? "bg-ink text-base" : "text-muted"
             }`}
           >
             <Icon size={18} strokeWidth={1.75} />

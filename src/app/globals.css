@@ -9,7 +9,7 @@
 
   ::selection {
     background-color: theme("colors.amber.DEFAULT");
-    color: theme("colors.base");
+    color: theme("colors.ink");
   }
 
   :focus-visible {
@@ -20,11 +20,11 @@
 
 @layer components {
   .card {
-    @apply rounded-sm border border-border bg-surface p-6;
+    @apply rounded-sm border border-border bg-surface p-6 shadow-sm;
   }
 
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-sm bg-amber px-4 py-2.5 text-sm font-medium text-base transition-colors hover:bg-amber-soft disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-sm bg-amber px-4 py-2.5 text-sm font-medium text-ink shadow-sm transition-colors hover:bg-amber-soft disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-secondary {

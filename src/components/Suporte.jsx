@@ -126,7 +126,7 @@ export default function Suporte({
               <div
                 className={`max-w-[78%] rounded-sm px-3 py-2 text-sm leading-relaxed ${
                   m.remetente === "usuario"
-                    ? "bg-amber text-base"
+                    ? "bg-amber text-ink"
                     : "border border-border bg-surface text-ink"
                 }`}
               >
