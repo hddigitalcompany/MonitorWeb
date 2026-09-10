@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ArrowLeft, Send } from "lucide-react";
+import { formatarHora } from "@/lib/tempo";
 
 const FILLERS_HESITACAO = ["entao", "bem", "assim", "tipo", "olha", "so um instante"];
 
@@ -14,10 +15,10 @@ function entre(min, max) {
   return min + Math.random() * (max - min);
 }
 
-function Bolha({ de, texto, destaque = false }) {
+function Bolha({ de, texto, destaque = false, hora }) {
   const propria = de === "usuario";
   return (
-    <div className={`flex ${propria ? "justify-end" : "justify-start"}`}>
+    <div className={`flex flex-col ${propria ? "items-end" : "items-start"}`}>
       <div
         className={`max-w-[85%] rounded-sm px-3 py-2 text-sm leading-relaxed ${
           propria
@@ -30,6 +31,7 @@ function Bolha({ de, texto, destaque = false }) {
         {texto}
         {!propria && texto === "" && <span className="opacity-0">.</span>}
       </div>
+      {hora && <span className="mt-1 px-1 text-[10px] text-muted">{formatarHora(hora)}</span>}
     </div>
   );
 }
@@ -69,7 +71,10 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
 
   function falarUsuario(texto) {
     if (!texto || !texto.trim()) return;
-    setMensagens((atuais) => [...atuais, { id: proximoId(), de: "usuario", texto: texto.trim() }]);
+    setMensagens((atuais) => [
+      ...atuais,
+      { id: proximoId(), de: "usuario", texto: texto.trim(), hora: new Date() },
+    ]);
   }
 
   // Efeito de "digitar de verdade": a mensagem vai aparecendo letra por
@@ -103,7 +108,10 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
       }
     }
 
-    setMensagens((prev) => [...prev, { id: proximoId(), de: "bot", texto: textoCompleto, destaque }]);
+    setMensagens((prev) => [
+      ...prev,
+      { id: proximoId(), de: "bot", texto: textoCompleto, destaque, hora: new Date() },
+    ]);
     setEmDigitacao(null);
   }
 
@@ -239,7 +247,7 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
 
       <div className="mb-4 flex flex-col gap-2.5">
         {mensagens.map((m) => (
-          <Bolha key={m.id} de={m.de} texto={m.texto} destaque={m.destaque} />
+          <Bolha key={m.id} de={m.de} texto={m.texto} destaque={m.destaque} hora={m.hora} />
         ))}
         {emDigitacao && <Bolha de="bot" texto={emDigitacao.texto} destaque={emDigitacao.destaque} />}
         {digitando && !emDigitacao && <BolhaDigitando />}

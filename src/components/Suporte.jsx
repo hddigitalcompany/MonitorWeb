@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Send, ArrowLeft } from "lucide-react";
 import CancelamentoCompra from "@/components/CancelamentoCompra";
 import StatusReembolso from "@/components/StatusReembolso";
+import { formatarHora } from "@/lib/tempo";
 
 export default function Suporte({
   chamadosIniciais,
@@ -113,7 +114,7 @@ export default function Suporte({
         >
           <ArrowLeft size={15} /> Voltar
         </button>
-        <p className="mb-1 font-serif text-lg text-ink">{chamadoAberto.assunto}</p>
+        <p className="mb-1 font-extrabold tracking-tight text-lg text-ink">{chamadoAberto.assunto}</p>
         <p
           className={`mb-4 text-xs ${chamadoAberto.status === "respondido" ? "text-olive" : "text-amber"}`}
         >
@@ -122,7 +123,7 @@ export default function Suporte({
 
         <div className="mb-4 flex flex-col gap-2.5">
           {chamadoAberto.mensagens.map((m) => (
-            <div key={m.id} className={`flex ${m.remetente === "usuario" ? "justify-end" : "justify-start"}`}>
+            <div key={m.id} className={`flex flex-col ${m.remetente === "usuario" ? "items-end" : "items-start"}`}>
               <div
                 className={`max-w-[78%] rounded-sm px-3 py-2 text-sm leading-relaxed ${
                   m.remetente === "usuario"
@@ -132,6 +133,7 @@ export default function Suporte({
               >
                 {m.texto}
               </div>
+              <span className="mt-1 px-1 text-[10px] text-muted">{formatarHora(m.criado_em)}</span>
             </div>
           ))}
         </div>

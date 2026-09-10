@@ -8,7 +8,7 @@ export default function LoginPage({ searchParams }) {
       <div className="w-full max-w-sm">
         <div className="mb-10 text-center">
           <p className="mb-2 text-sm tracking-wide text-muted">Diário digital</p>
-          <h1 className="font-serif text-4xl leading-tight text-ink">
+          <h1 className="font-extrabold tracking-tight text-4xl leading-tight text-ink">
             Painel Pessoal
           </h1>
           <p className="mt-3 text-sm text-muted">

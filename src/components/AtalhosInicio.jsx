@@ -14,9 +14,11 @@ export default function AtalhosInicio() {
           <Link
             key={href}
             href={href}
-            className="flex flex-col items-start gap-2 rounded-sm border border-border bg-surface p-3"
+            className="flex flex-col items-start gap-2.5 rounded-sm border border-border bg-surface p-3"
           >
-            <Icon size={18} className="text-amber" strokeWidth={1.75} />
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-amber">
+              <Icon size={16} className="text-ink" strokeWidth={2} />
+            </span>
             <span className="text-xs text-ink">{label}</span>
           </Link>
         ))}

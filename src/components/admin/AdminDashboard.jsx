@@ -6,6 +6,7 @@ import { Trash2, Upload, Send, ArrowLeft } from "lucide-react";
 import { extrairIdYoutube } from "@/lib/youtube";
 import { TEXTOS_PADRAO } from "@/lib/textos";
 import { calcularEtapaReembolso } from "@/lib/reembolso";
+import { formatarHora } from "@/lib/tempo";
 
 const SECOES = [
   { id: "video", label: "Vídeo do dia" },
@@ -27,7 +28,7 @@ export default function AdminDashboard({ dadosIniciais }) {
 
   return (
     <div className="mx-auto max-w-2xl px-5 py-8">
-      <p className="mb-1 font-serif text-2xl text-ink">Administração</p>
+      <p className="mb-1 font-extrabold tracking-tight text-2xl text-ink">Administração</p>
       <p className="mb-6 text-sm text-muted">Publique conteúdo e responda chamados de suporte.</p>
 
       <div className="mb-6 flex flex-wrap gap-1.5 border-b border-border pb-4">
@@ -598,13 +599,14 @@ function SecaoSuporte({ chamadosIniciais }) {
     return (
       <div>
         <button onClick={() => setAbertoId(null)} className="mb-4 flex items-center gap-1.5 text-sm text-muted"><ArrowLeft size={15} /> Voltar</button>
-        <p className="mb-4 font-serif text-lg text-ink">{chamado.assunto}</p>
+        <p className="mb-4 font-extrabold tracking-tight text-lg text-ink">{chamado.assunto}</p>
         <div className="mb-4 flex flex-col gap-2.5">
           {chamado.mensagens.map((m) => (
-            <div key={m.id} className={`flex ${m.remetente === "suporte" ? "justify-end" : "justify-start"}`}>
+            <div key={m.id} className={`flex flex-col ${m.remetente === "suporte" ? "items-end" : "items-start"}`}>
               <div className={`max-w-[78%] rounded-sm px-3 py-2 text-sm leading-relaxed ${m.remetente === "suporte" ? "bg-amber text-ink" : "border border-border bg-surface text-ink"}`}>
                 {m.texto}
               </div>
+              <span className="mt-1 px-1 text-[10px] text-muted">{formatarHora(m.criado_em)}</span>
             </div>
           ))}
         </div>

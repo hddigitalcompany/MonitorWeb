@@ -57,7 +57,7 @@ export default function PerfilModal({ aberto, aoFechar, user, aoAtualizar }) {
     >
       <div className="w-full max-w-md rounded-t-xl border-t border-border bg-surface px-5 pb-6 pt-5">
         <div className="mb-4 flex items-center justify-between">
-          <p className="font-serif text-lg text-ink">Meu perfil</p>
+          <p className="font-extrabold tracking-tight text-lg text-ink">Meu perfil</p>
           <button onClick={aoFechar} aria-label="Fechar" className="text-muted">
             <X size={19} />
           </button>

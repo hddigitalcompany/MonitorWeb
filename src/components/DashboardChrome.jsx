@@ -54,7 +54,7 @@ export function DashboardChrome({ user, children }) {
         >
           <Menu size={21} strokeWidth={1.75} />
         </button>
-        <p className="font-serif text-lg text-ink">Painel Pessoal</p>
+        <p className="font-extrabold tracking-tight text-lg text-ink">Painel Pessoal</p>
       </header>
 
       <main className="flex-1 overflow-y-auto px-4 py-5">{children}</main>

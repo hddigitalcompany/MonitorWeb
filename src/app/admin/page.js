@@ -56,7 +56,7 @@ export default async function AdminPage() {
     return (
       <main className="flex min-h-screen items-center justify-center px-6 text-center">
         <div>
-          <p className="font-serif text-2xl text-ink">Acesso restrito</p>
+          <p className="font-extrabold tracking-tight text-2xl text-ink">Acesso restrito</p>
           <p className="mt-2 text-sm text-muted">
             Essa área é só para administradores do app.
           </p>
