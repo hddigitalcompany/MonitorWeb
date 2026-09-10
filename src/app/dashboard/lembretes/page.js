@@ -15,7 +15,8 @@ export default async function LembretesPage() {
   const { data } = await supabase
     .from("conteudo_lembretes")
     .select("*")
-    .order("criado_em", { ascending: true });
+    .order("criado_em", { ascending: true })
+    .order("id", { ascending: true });
 
   const todos = data || [];
   const liberados = quantidadeLiberada("lembretes", perfil.primeiro_login, new Date(), todos.length);

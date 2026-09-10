@@ -15,7 +15,8 @@ export default async function WifiPage() {
   const { data } = await supabase
     .from("conteudo_wifi_dicas")
     .select("*")
-    .order("criado_em", { ascending: true });
+    .order("criado_em", { ascending: true })
+    .order("id", { ascending: true });
 
   const todas = data || [];
   const liberadas = quantidadeLiberada("wifi", perfil.primeiro_login, new Date(), todas.length);

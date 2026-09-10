@@ -15,7 +15,8 @@ export default async function FotosPage() {
   const { data } = await supabase
     .from("conteudo_fotos")
     .select("*")
-    .order("criado_em", { ascending: true });
+    .order("criado_em", { ascending: true })
+    .order("id", { ascending: true });
 
   const todas = data || [];
   const liberadas = quantidadeLiberada("fotos", perfil.primeiro_login, new Date(), todas.length);
