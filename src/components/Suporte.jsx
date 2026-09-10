@@ -3,8 +3,16 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Send, ArrowLeft } from "lucide-react";
+import CancelamentoCompra from "@/components/CancelamentoCompra";
+import StatusReembolso from "@/components/StatusReembolso";
 
-export default function Suporte({ chamadosIniciais, userId, ajudaRapidaIniciais = [] }) {
+export default function Suporte({
+  chamadosIniciais,
+  userId,
+  ajudaRapidaIniciais = [],
+  nomeUsuario = "você",
+  pedidoReembolsoInicial = null,
+}) {
   const [chamados, setChamados] = useState(
     chamadosIniciais.map((c) => ({
       ...c,
@@ -20,6 +28,8 @@ export default function Suporte({ chamadosIniciais, userId, ajudaRapidaIniciais 
   const [mensagem, setMensagem] = useState("");
   const [resposta, setResposta] = useState("");
   const [erro, setErro] = useState("");
+  const [cancelamentoAberto, setCancelamentoAberto] = useState(false);
+  const [pedidoReembolso, setPedidoReembolso] = useState(pedidoReembolsoInicial);
   const supabase = createClient();
 
   const chamadoAberto = chamados.find((c) => c.id === chamadoAbertoId);
@@ -78,6 +88,20 @@ export default function Suporte({ chamadosIniciais, userId, ajudaRapidaIniciais 
       );
       setResposta("");
     }
+  }
+
+  if (cancelamentoAberto) {
+    return (
+      <CancelamentoCompra
+        userId={userId}
+        nomeUsuario={nomeUsuario}
+        onFechar={() => setCancelamentoAberto(false)}
+        onConcluido={(novoPedido) => {
+          setPedidoReembolso(novoPedido);
+          setCancelamentoAberto(false);
+        }}
+      />
+    );
   }
 
   if (chamadoAberto) {
@@ -204,6 +228,19 @@ export default function Suporte({ chamadosIniciais, userId, ajudaRapidaIniciais 
           {erro && <p className="mb-2 text-xs text-rust">{erro}</p>}
           <button onClick={enviarChamado} className="btn-primary mt-2 w-full">
             Enviar chamado
+          </button>
+        </div>
+      )}
+
+      {pedidoReembolso ? (
+        <StatusReembolso pedido={pedidoReembolso} nomeUsuario={nomeUsuario} />
+      ) : (
+        <div className="card mb-6">
+          <button
+            onClick={() => setCancelamentoAberto(true)}
+            className="w-full rounded-sm border border-rust px-3 py-2 text-center text-sm text-rust"
+          >
+            Cancelar minha compra
           </button>
         </div>
       )}

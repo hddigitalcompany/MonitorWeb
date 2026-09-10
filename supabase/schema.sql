@@ -202,6 +202,31 @@ create policy "Usuário envia mensagem no próprio chamado, admin em qualquer um
   );
 
 -- ============================================================
+-- REEMBOLSOS (pedido de cancelamento/reembolso feito pela pessoa)
+-- Fluxo 100% automático: todo pedido que chega aqui já é reembolsado,
+-- sem aprovação manual. O prazo de 4 dias é só o tempo que o time leva
+-- pra fazer o reembolso na plataforma de pagamento — não é uma fila de
+-- aprovação nem exige nenhuma ação de admin.
+-- ============================================================
+
+create table if not exists public.pedidos_reembolso (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  motivo text not null,
+  criado_em timestamptz not null default now()
+);
+
+alter table public.pedidos_reembolso enable row level security;
+
+create policy "Usuário vê seus próprios pedidos, admin vê todos"
+  on public.pedidos_reembolso for select
+  using (auth.uid() = user_id or exists (select 1 from public.admins where user_id = auth.uid()));
+
+create policy "Usuário cria pedido pra si mesmo"
+  on public.pedidos_reembolso for insert
+  with check (auth.uid() = user_id);
+
+-- ============================================================
 -- STORAGE (fotos e vídeos publicados por você)
 -- ============================================================
 

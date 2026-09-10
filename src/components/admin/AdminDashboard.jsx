@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Trash2, Upload, Send, ArrowLeft } from "lucide-react";
 import { extrairIdYoutube } from "@/lib/youtube";
 import { TEXTOS_PADRAO } from "@/lib/textos";
+import { calcularEtapaReembolso } from "@/lib/reembolso";
 
 const SECOES = [
   { id: "video", label: "Vídeo do dia" },
@@ -17,6 +18,7 @@ const SECOES = [
   { id: "ajuda", label: "Ajuda rápida" },
   { id: "suporte", label: "Suporte" },
   { id: "clientes", label: "Clientes" },
+  { id: "reembolsos", label: "Reembolsos" },
   { id: "textos", label: "Textos" },
 ];
 
@@ -55,6 +57,9 @@ export default function AdminDashboard({ dadosIniciais }) {
       {secao === "suporte" && <SecaoSuporte chamadosIniciais={dadosIniciais.chamados} />}
       {secao === "clientes" && (
         <SecaoClientes itens={dadosIniciais.clientes} erroConfig={dadosIniciais.erroClientes} />
+      )}
+      {secao === "reembolsos" && (
+        <SecaoReembolsos itens={dadosIniciais.reembolsos} erroConfig={dadosIniciais.erroClientes} />
       )}
       {secao === "textos" && <SecaoTextos itens={dadosIniciais.textos} />}
     </div>
@@ -958,6 +963,57 @@ function SecaoAjudaRapida({ itens: itensIniciais }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function SecaoReembolsos({ itens, erroConfig }) {
+  if (erroConfig) {
+    return (
+      <div className="card">
+        <p className="text-sm text-ink">Isso ainda não foi configurado.</p>
+        <p className="mt-1 text-xs text-muted">
+          Falta ativar a chave de administração do Supabase no servidor. Fala com o Claude pra
+          concluir essa configuração.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <p className="mb-4 text-xs text-muted">
+        Todo pedido aqui já foi aceito — não precisa aprovar nada. O prazo de 4 dias é só pra você
+        fazer o reembolso na plataforma de pagamento.
+      </p>
+      {itens.length === 0 ? (
+        <p className="text-sm text-muted">Nenhum pedido de reembolso ainda.</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {itens.map((p) => {
+            const { concluido, textoRestante } = calcularEtapaReembolso(p.criado_em);
+            return (
+              <div key={p.id} className="rounded-sm border border-border bg-surface p-3">
+                <div className="mb-1 flex items-start justify-between gap-2">
+                  <p className="text-sm text-ink">{p.nome || p.email}</p>
+                  <span
+                    className={`shrink-0 rounded-sm border px-1.5 py-0.5 text-[10px] ${
+                      concluido ? "border-olive text-olive" : "border-amber text-amber"
+                    }`}
+                  >
+                    {concluido ? "Concluído" : `Faltam ${textoRestante}`}
+                  </span>
+                </div>
+                <p className="mb-1 text-xs text-muted">{p.email}</p>
+                <p className="text-sm text-ink">{p.motivo}</p>
+                <p className="mt-1 text-[10px] text-muted">
+                  Pedido feito em {new Date(p.criado_em).toLocaleDateString("pt-BR")}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

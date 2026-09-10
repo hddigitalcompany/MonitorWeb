@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 
-async function buscarClientes(supabase) {
+async function buscarClientesEUsuarios(supabase) {
   const { data: listaAdmins } = await supabase.from("admins").select("user_id");
   const idsAdmins = new Set((listaAdmins || []).map((a) => a.user_id));
 
@@ -12,7 +12,15 @@ async function buscarClientes(supabase) {
     const { data, error } = await supabaseAdmin.auth.admin.listUsers({ perPage: 200 });
     if (error) throw error;
 
-    const clientes = (data?.users || [])
+    const usuarios = data?.users || [];
+    const mapaUsuarios = new Map(
+      usuarios.map((u) => [
+        u.id,
+        { nome: u.user_metadata?.full_name || u.user_metadata?.name || "", email: u.email },
+      ])
+    );
+
+    const clientes = usuarios
       .filter((u) => !idsAdmins.has(u.id))
       .map((u) => ({
         id: u.id,
@@ -23,10 +31,10 @@ async function buscarClientes(supabase) {
       }))
       .sort((a, b) => (a.nome || a.email).localeCompare(b.nome || b.email));
 
-    return { clientes, erroConfig: false };
+    return { clientes, mapaUsuarios, erroConfig: false };
   } catch (err) {
     console.error('[admin/clientes] erro ao buscar clientes:', err?.message || err);
-    return { clientes: [], erroConfig: true };
+    return { clientes: [], mapaUsuarios: new Map(), erroConfig: true };
   }
 }
 
@@ -68,7 +76,8 @@ export default async function AdminPage() {
     textos,
     ajudaRapida,
     chamados,
-    { clientes, erroConfig },
+    pedidosReembolso,
+    { clientes, mapaUsuarios, erroConfig },
   ] = await Promise.all([
     supabase.from("conteudo_fotos").select("*").order("criado_em", { ascending: false }),
     supabase.from("conteudo_video_dia").select("*").order("criado_em", { ascending: false }),
@@ -83,8 +92,18 @@ export default async function AdminPage() {
       .from("chamados_suporte")
       .select("*, mensagens_suporte(*)")
       .order("criado_em", { ascending: false }),
-    buscarClientes(supabase),
+    supabase.from("pedidos_reembolso").select("*").order("criado_em", { ascending: false }),
+    buscarClientesEUsuarios(supabase),
   ]);
+
+  const reembolsos = (pedidosReembolso.data || []).map((p) => {
+    const info = mapaUsuarios.get(p.user_id);
+    return {
+      ...p,
+      nome: info?.nome || "",
+      email: info?.email || "Conta removida",
+    };
+  });
 
   return (
     <AdminDashboard
@@ -101,6 +120,7 @@ export default async function AdminPage() {
         chamados: chamados.data || [],
         clientes,
         erroClientes: erroConfig,
+        reembolsos,
       }}
     />
   );

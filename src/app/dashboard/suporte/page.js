@@ -21,6 +21,16 @@ export default async function SuportePage() {
     .select("*")
     .order("criado_em", { ascending: true });
 
+  const { data: pedidosReembolso } = await supabase
+    .from("pedidos_reembolso")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("criado_em", { ascending: false })
+    .limit(1);
+
+  const nomeCompleto = user.user_metadata?.full_name || user.user_metadata?.name || "";
+  const nomeUsuario = nomeCompleto ? nomeCompleto.split(" ")[0] : "você";
+
   return (
     <div>
       <PageHeader title={texto(textos, "suporte_titulo")} subtitle={texto(textos, "suporte_subtitulo")} />
@@ -28,6 +38,8 @@ export default async function SuportePage() {
         chamadosIniciais={chamados || []}
         userId={user.id}
         ajudaRapidaIniciais={ajudaRapida || []}
+        nomeUsuario={nomeUsuario}
+        pedidoReembolsoInicial={pedidosReembolso?.[0] || null}
       />
     </div>
   );
