@@ -169,6 +169,10 @@ create policy "Usuário cria chamado pra si mesmo"
   on public.chamados_suporte for insert
   with check (auth.uid() = user_id);
 
+create policy "Admin cria chamado para qualquer usuário"
+  on public.chamados_suporte for insert
+  with check (exists (select 1 from public.admins where user_id = auth.uid()));
+
 create policy "Admin atualiza status do chamado"
   on public.chamados_suporte for update
   using (exists (select 1 from public.admins where user_id = auth.uid()));

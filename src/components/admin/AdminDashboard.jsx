@@ -15,6 +15,7 @@ const SECOES = [
   { id: "wifi", label: "Wifi" },
   { id: "contatos", label: "Contatos úteis" },
   { id: "suporte", label: "Suporte" },
+  { id: "clientes", label: "Clientes" },
   { id: "textos", label: "Textos" },
 ];
 
@@ -50,6 +51,9 @@ export default function AdminDashboard({ dadosIniciais }) {
       {secao === "wifi" && <SecaoWifi itens={dadosIniciais.wifiDicas} />}
       {secao === "contatos" && <SecaoContatos itens={dadosIniciais.contatos} />}
       {secao === "suporte" && <SecaoSuporte chamadosIniciais={dadosIniciais.chamados} />}
+      {secao === "clientes" && (
+        <SecaoClientes itens={dadosIniciais.clientes} erroConfig={dadosIniciais.erroClientes} />
+      )}
       {secao === "textos" && <SecaoTextos itens={dadosIniciais.textos} />}
     </div>
   );
@@ -715,6 +719,170 @@ function TextoEditavel({ chave, label, valorInicial }) {
           {salvando ? "Salvando..." : salvo}
         </button>
       )}
+    </div>
+  );
+}
+
+
+function SecaoClientes({ itens, erroConfig }) {
+  const [clientes, setClientes] = useState(itens);
+
+  if (erroConfig) {
+    return (
+      <div className="card">
+        <p className="text-sm text-ink">Isso ainda não foi configurado.</p>
+        <p className="mt-1 text-xs text-muted">
+          Falta ativar a chave de administração do Supabase no servidor. Fala com o Claude pra
+          concluir essa configuração.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="mb-2 text-xs text-muted">
+        {clientes.length === 0
+          ? "Nenhum cliente usando o app ainda."
+          : `${clientes.length} cliente${clientes.length > 1 ? "s" : ""} usando o app.`}
+      </p>
+      {clientes.map((cliente) => (
+        <ClienteCard
+          key={cliente.id}
+          cliente={cliente}
+          onRemovido={() => setClientes(clientes.filter((c) => c.id !== cliente.id))}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ClienteCard({ cliente, onRemovido }) {
+  const [mensagemAberta, setMensagemAberta] = useState(false);
+  const [mensagem, setMensagem] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [enviada, setEnviada] = useState(false);
+  const [confirmarRemocao, setConfirmarRemocao] = useState(false);
+  const [removendo, setRemovendo] = useState(false);
+  const [erro, setErro] = useState("");
+  const supabase = createClient();
+
+  async function enviarMensagem() {
+    if (!mensagem.trim()) return;
+    setEnviando(true);
+    setErro("");
+
+    const { data: chamado, error: erroChamado } = await supabase
+      .from("chamados_suporte")
+      .insert({ user_id: cliente.id, assunto: "Mensagem da administração", status: "respondido" })
+      .select()
+      .single();
+
+    if (erroChamado || !chamado) {
+      setErro("Não deu pra enviar. Tente de novo.");
+      setEnviando(false);
+      return;
+    }
+
+    const { error: erroMsg } = await supabase
+      .from("mensagens_suporte")
+      .insert({ chamado_id: chamado.id, remetente: "suporte", texto: mensagem.trim() });
+
+    if (erroMsg) {
+      setErro("Não deu pra enviar. Tente de novo.");
+    } else {
+      setMensagem("");
+      setEnviada(true);
+      setTimeout(() => {
+        setEnviada(false);
+        setMensagemAberta(false);
+      }, 1500);
+    }
+    setEnviando(false);
+  }
+
+  async function remover() {
+    if (!confirmarRemocao) {
+      setConfirmarRemocao(true);
+      setTimeout(() => setConfirmarRemocao(false), 4000);
+      return;
+    }
+    setRemovendo(true);
+    setErro("");
+    try {
+      const resposta = await fetch(`/api/admin/usuarios/${cliente.id}`, { method: "DELETE" });
+      if (resposta.ok) {
+        onRemovido();
+        return;
+      }
+      setErro("Não deu pra remover essa conta. Tente de novo.");
+    } catch {
+      setErro("Não deu pra remover essa conta. Tente de novo.");
+    }
+    setConfirmarRemocao(false);
+    setRemovendo(false);
+  }
+
+  return (
+    <div className="rounded-sm border border-border bg-surface p-3">
+      <div className="flex items-center gap-2.5">
+        {cliente.avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={cliente.avatarUrl}
+            alt=""
+            className="h-9 w-9 shrink-0 rounded-full border border-border object-cover"
+          />
+        ) : (
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber/20 text-xs text-ink">
+            {(cliente.nome || cliente.email || "?").slice(0, 1).toUpperCase()}
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm text-ink">{cliente.nome || "Sem nome"}</p>
+          <p className="truncate text-xs text-muted">{cliente.email}</p>
+        </div>
+      </div>
+      <p className="mt-2 text-[11px] text-muted">Entrou em {cliente.criadoEm}</p>
+
+      <div className="mt-3 flex gap-2">
+        <button
+          onClick={() => setMensagemAberta(!mensagemAberta)}
+          className="flex-1 rounded-sm border border-border px-2 py-1.5 text-xs text-ink"
+        >
+          Mandar mensagem
+        </button>
+        <button
+          onClick={remover}
+          disabled={removendo}
+          className={`flex-1 rounded-sm border px-2 py-1.5 text-xs ${
+            confirmarRemocao ? "border-rust bg-rust/10 text-rust" : "border-border text-muted"
+          }`}
+        >
+          {removendo ? "Removendo..." : confirmarRemocao ? "Confirmar remoção" : "Remover conta"}
+        </button>
+      </div>
+
+      {mensagemAberta && (
+        <div className="mt-3 border-t border-border pt-3">
+          <textarea
+            value={mensagem}
+            onChange={(e) => setMensagem(e.target.value)}
+            rows={2}
+            placeholder="Escreva a mensagem"
+            className="field-input mb-2 resize-none"
+          />
+          <button
+            onClick={enviarMensagem}
+            disabled={enviando || !mensagem.trim()}
+            className="btn-primary w-full"
+          >
+            {enviando ? "Enviando..." : enviada ? "Enviada!" : "Enviar"}
+          </button>
+        </div>
+      )}
+
+      {erro && <p className="mt-2 text-xs text-rust">{erro}</p>}
     </div>
   );
 }
