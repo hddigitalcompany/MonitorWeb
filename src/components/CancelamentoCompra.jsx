@@ -59,9 +59,12 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
     setMensagens((atuais) => [...atuais, { id: proximoId(), de: "usuario", texto }]);
   }
 
-  async function falarBot(texto, { delay = 1100, destaque = false } = {}) {
+  async function falarBot(texto, { delay, destaque = false } = {}) {
+    // Quanto maior a mensagem, mais tempo ela "leva pra ser digitada" —
+    // fica mais parecido com uma conversa de verdade em vez de instantâneo.
+    const atraso = delay ?? Math.min(3200, Math.max(1300, texto.length * 25));
     setDigitando(true);
-    await new Promise((resolve) => setTimeout(resolve, delay));
+    await new Promise((resolve) => setTimeout(resolve, atraso));
     setDigitando(false);
     setMensagens((atuais) => [...atuais, { id: proximoId(), de: "bot", texto, destaque }]);
   }
@@ -69,8 +72,7 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
   useEffect(() => {
     (async () => {
       await falarBot(
-        "Ao continuar, sua compra será cancelada e o acesso ao aplicativo será encerrado. O valor pago entra em análise: se a sua compra estiver dentro de 7 dias, você recebe o valor integral de volta.",
-        { delay: 500 }
+        "Ao continuar, sua compra será cancelada e o acesso ao aplicativo será encerrado. O valor pago entra em análise: se a sua compra estiver dentro de 7 dias, você recebe o valor integral de volta."
       );
       setEtapa("aguardando_confirmacao");
     })();
@@ -114,10 +116,10 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
   async function agenteContinuar() {
     falarUsuario("Continuar");
     setEtapa("processando");
-    await falarBot("Verificando sua compra...", { delay: 900 });
+    await falarBot("Verificando sua compra...", { delay: 2200 });
     await falarBot(
       "Verifiquei e ressaltamos que sua compra está dentro do prazo e elegível para reembolso, conforme você me pediu eu vou dar prosseguimento no seu pedido e farei o cancelamento...",
-      { delay: 1800, destaque: true }
+      { destaque: true }
     );
     await falarBot(
       `O pedido vai para análise ${nomeUsuario}, tudo bem? Essa análise leva no máximo 4 dias, e após isso você poderá acompanhar por aqui o pedido de reembolso.`,
@@ -130,7 +132,7 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
     falarUsuario("Sim, pode confirmar");
     setErro("");
     setEtapa("processando");
-    await falarBot("Enviando pedido...", { delay: 900 });
+    await falarBot("Enviando pedido...", { delay: 2000 });
 
     const { data: novo, error } = await supabase
       .from("pedidos_reembolso")
