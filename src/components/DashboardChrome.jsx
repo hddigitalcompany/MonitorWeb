@@ -20,6 +20,7 @@ import {
   Headset,
   CreditCard,
   LogOut,
+  LocateFixed,
 } from "lucide-react";
 
 export const ABAS = [
@@ -55,7 +56,12 @@ export function DashboardChrome({ user, telefone, children }) {
         >
           <Menu size={21} strokeWidth={1.75} />
         </button>
-        <p className="font-extrabold tracking-tight text-lg text-ink">📍 {formatarTelefone(telefone)}</p>
+        <p className="flex items-center gap-1.5 font-extrabold tracking-tight text-lg text-ink">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber">
+            <LocateFixed size={13} className="text-ink" strokeWidth={2.25} />
+          </span>
+          {formatarTelefone(telefone)}
+        </p>
       </header>
 
       <main className="flex-1 overflow-y-auto px-4 py-5">{children}</main>
