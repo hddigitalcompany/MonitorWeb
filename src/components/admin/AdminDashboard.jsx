@@ -211,6 +211,7 @@ function SecaoFotos({ itens: itensIniciais }) {
 function SecaoLembretes({ itens: itensIniciais }) {
   const [itens, setItens] = useState(itensIniciais);
   const [hora, setHora] = useState("");
+  const [lembrete, setLembrete] = useState("");
   const [atividade, setAtividade] = useState("");
   const supabase = createClient();
 
@@ -222,14 +223,15 @@ function SecaoLembretes({ itens: itensIniciais }) {
   }
 
   async function adicionar() {
-    if (!atividade.trim()) return;
+    if (!lembrete.trim()) return;
     const { data: novo } = await supabase
       .from("conteudo_lembretes")
-      .insert({ hora: hora || null, atividade: atividade.trim(), texto: atividade.trim() })
+      .insert({ hora: hora || null, texto: lembrete.trim(), atividade: atividade.trim() || null })
       .select()
       .single();
     if (novo) setItens([...itens, novo].sort(ordenar));
     setHora("");
+    setLembrete("");
     setAtividade("");
   }
 
@@ -243,11 +245,18 @@ function SecaoLembretes({ itens: itensIniciais }) {
       <div className="card mb-6">
         <p className="field-label">Hora</p>
         <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} className="field-input mb-3" />
+        <p className="field-label">Lembrete</p>
+        <input
+          value={lembrete}
+          onChange={(e) => setLembrete(e.target.value)}
+          placeholder="Ex: Ligar pra vovó"
+          className="field-input mb-3"
+        />
         <p className="field-label">Atividade</p>
         <input
           value={atividade}
           onChange={(e) => setAtividade(e.target.value)}
-          placeholder="Ex: Tomar remédio"
+          placeholder="Ex: Perguntar sobre a consulta"
           className="field-input mb-3"
         />
         <button onClick={adicionar} className="btn-primary w-full">Publicar</button>
@@ -255,11 +264,12 @@ function SecaoLembretes({ itens: itensIniciais }) {
       <div className="flex flex-col gap-2">
         {[...itens].sort(ordenar).map((i) => (
           <div key={i.id} className="flex items-center justify-between gap-2 rounded-sm border border-border bg-surface p-3">
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 flex-1 items-baseline gap-2">
               {i.hora && (
                 <span className="shrink-0 rounded-sm bg-amber/20 px-2 py-1 text-xs font-medium text-ink">{i.hora}</span>
               )}
-              <p className="text-sm text-ink">{i.atividade || i.texto}</p>
+              <p className="truncate text-sm font-medium text-ink">{i.texto}</p>
+              {i.atividade && <p className="truncate text-xs text-muted">— {i.atividade}</p>}
             </div>
             <button onClick={() => excluir(i.id)} className="shrink-0 text-muted hover:text-rust"><Trash2 size={14} /></button>
           </div>

@@ -23,13 +23,18 @@ export default async function LembretesPage() {
       ) : (
         <div className="flex flex-col gap-2">
           {itens.map((item) => (
-            <div key={item.id} className="flex items-center gap-3 rounded-sm border border-border bg-surface p-3">
-              {item.hora && (
-                <span className="shrink-0 rounded-sm bg-amber/20 px-2 py-1 text-xs font-medium text-ink">
-                  {item.hora}
-                </span>
+            <div key={item.id} className="rounded-sm border border-border bg-surface p-3">
+              <div className="flex items-baseline gap-2">
+                {item.hora && (
+                  <span className="shrink-0 rounded-sm bg-amber/20 px-2 py-1 text-xs font-medium text-ink">
+                    {item.hora}
+                  </span>
+                )}
+                <p className="text-sm font-medium leading-relaxed text-ink">{item.texto}</p>
+              </div>
+              {item.atividade && (
+                <p className="mt-1 text-xs leading-relaxed text-muted">{item.atividade}</p>
               )}
-              <p className="text-sm leading-relaxed text-ink">{item.atividade || item.texto}</p>
             </div>
           ))}
         </div>
