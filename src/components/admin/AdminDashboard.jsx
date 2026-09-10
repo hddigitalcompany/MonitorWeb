@@ -369,6 +369,9 @@ function SecaoLembretes({ itens: itensIniciais }) {
 function SecaoTexto({ tabela, itens: itensIniciais, placeholder }) {
   const [itens, setItens] = useState(itensIniciais);
   const [texto, setTexto] = useState("");
+  const [lista, setLista] = useState("");
+  const [enviandoLista, setEnviandoLista] = useState(false);
+  const [erroLista, setErroLista] = useState("");
   const supabase = createClient();
 
   async function adicionar() {
@@ -376,6 +379,30 @@ function SecaoTexto({ tabela, itens: itensIniciais, placeholder }) {
     const { data: novo } = await supabase.from(tabela).insert({ texto: texto.trim() }).select().single();
     if (novo) setItens([novo, ...itens]);
     setTexto("");
+  }
+
+  async function adicionarLista() {
+    setErroLista("");
+    const entradas = lista
+      .split(/;|\s+\.\s+/)
+      .map((item) => item.trim().replace(/\.$/, "").trim())
+      .filter(Boolean)
+      .map((item) => ({ texto: item }));
+
+    if (entradas.length === 0) {
+      setErroLista("Não encontrei nenhum item válido. Separe um item do outro com ;");
+      return;
+    }
+
+    setEnviandoLista(true);
+    const { data: novos, error } = await supabase.from(tabela).insert(entradas).select();
+    if (!error && novos) {
+      setItens([...novos, ...itens]);
+      setLista("");
+    } else {
+      setErroLista("Não deu pra salvar a lista. Tente de novo.");
+    }
+    setEnviandoLista(false);
   }
 
   async function excluir(id) {
@@ -389,6 +416,23 @@ function SecaoTexto({ tabela, itens: itensIniciais, placeholder }) {
         <input value={texto} onChange={(e) => setTexto(e.target.value)} placeholder={placeholder} className="field-input" />
         <button onClick={adicionar} className="btn-primary shrink-0">Publicar</button>
       </div>
+
+      <div className="card mb-6">
+        <p className="field-label">Colar lista (vários de uma vez)</p>
+        <textarea
+          value={lista}
+          onChange={(e) => setLista(e.target.value)}
+          rows={5}
+          className="field-input mb-2"
+          placeholder={`${placeholder}; outro; mais um`}
+        />
+        <p className="mb-3 text-xs text-muted">Separe um item do outro com ponto e vírgula.</p>
+        <button onClick={adicionarLista} disabled={enviandoLista || !lista.trim()} className="btn-primary w-full">
+          {enviandoLista ? "Publicando..." : "Publicar lista"}
+        </button>
+        {erroLista && <p className="mt-2 text-xs text-rust">{erroLista}</p>}
+      </div>
+
       <div className="flex flex-col gap-2">
         {itens.map((i) => (
           <div key={i.id} className="flex items-start justify-between gap-2 rounded-sm border border-border bg-surface p-3">
