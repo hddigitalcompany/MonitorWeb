@@ -179,19 +179,28 @@ function SecaoVideo({ itens: itensIniciais }) {
 function SecaoFotos({ itens: itensIniciais }) {
   const [itens, setItens] = useState(itensIniciais);
   const [enviando, setEnviando] = useState(false);
+  const [progresso, setProgresso] = useState({ feito: 0, total: 0 });
   const supabase = createClient();
 
   async function enviar(e) {
-    const arquivo = e.target.files?.[0];
-    if (!arquivo) return;
+    const arquivos = Array.from(e.target.files || []);
+    if (arquivos.length === 0) return;
     setEnviando(true);
-    const caminho = `fotos/${Date.now()}-${arquivo.name}`;
-    const { error } = await supabase.storage.from("conteudo").upload(caminho, arquivo);
-    if (!error) {
-      const { data: { publicUrl } } = supabase.storage.from("conteudo").getPublicUrl(caminho);
-      const { data: nova } = await supabase.from("conteudo_fotos").insert({ url: publicUrl, caminho }).select().single();
-      if (nova) setItens([nova, ...itens]);
+    setProgresso({ feito: 0, total: arquivos.length });
+
+    const novas = [];
+    for (const arquivo of arquivos) {
+      const caminho = `fotos/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${arquivo.name}`;
+      const { error } = await supabase.storage.from("conteudo").upload(caminho, arquivo);
+      if (!error) {
+        const { data: { publicUrl } } = supabase.storage.from("conteudo").getPublicUrl(caminho);
+        const { data: nova } = await supabase.from("conteudo_fotos").insert({ url: publicUrl, caminho }).select().single();
+        if (nova) novas.push(nova);
+      }
+      setProgresso((p) => ({ ...p, feito: p.feito + 1 }));
     }
+
+    if (novas.length > 0) setItens([...novas, ...itens]);
     setEnviando(false);
     e.target.value = "";
   }
@@ -205,8 +214,16 @@ function SecaoFotos({ itens: itensIniciais }) {
   return (
     <div>
       <label className="btn-primary mb-6 inline-flex cursor-pointer">
-        <Upload size={15} /> {enviando ? "Enviando..." : "Subir foto"}
-        <input type="file" accept="image/*" onChange={enviar} disabled={enviando} className="hidden" />
+        <Upload size={15} />{" "}
+        {enviando ? `Enviando ${progresso.feito} de ${progresso.total}...` : "Subir fotos"}
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={enviar}
+          disabled={enviando}
+          className="hidden"
+        />
       </label>
       <div className="grid grid-cols-3 gap-2">
         {itens.map((f) => (
