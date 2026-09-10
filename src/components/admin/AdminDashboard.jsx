@@ -470,6 +470,9 @@ function SecaoContatos({ itens: itensIniciais }) {
   const [nome, setNome] = useState("");
   const [categoria, setCategoria] = useState("");
   const [numero, setNumero] = useState("");
+  const [lista, setLista] = useState("");
+  const [enviandoLista, setEnviandoLista] = useState(false);
+  const [erroLista, setErroLista] = useState("");
   const supabase = createClient();
 
   async function adicionar() {
@@ -477,6 +480,34 @@ function SecaoContatos({ itens: itensIniciais }) {
     const { data: novo } = await supabase.from("conteudo_contatos").insert({ nome: nome.trim(), categoria: categoria.trim(), numero: numero.trim() }).select().single();
     if (novo) setItens([novo, ...itens]);
     setNome(""); setCategoria(""); setNumero("");
+  }
+
+  async function adicionarLista() {
+    setErroLista("");
+    const entradas = lista
+      .split(/;|\s+\.\s+/)
+      .map((item) => item.trim().replace(/\.$/, "").trim())
+      .filter(Boolean)
+      .map((item) => {
+        const [n, c, ...resto] = item.split(",").map((p) => p.trim());
+        return { nome: n || "", categoria: c || "", numero: resto.join(", ").trim() };
+      })
+      .filter((item) => item.nome && item.categoria && item.numero);
+
+    if (entradas.length === 0) {
+      setErroLista("Não encontrei nenhum item válido. Use: nome,categoria,número; nome,categoria,número");
+      return;
+    }
+
+    setEnviandoLista(true);
+    const { data: novos, error } = await supabase.from("conteudo_contatos").insert(entradas).select();
+    if (!error && novos) {
+      setItens([...novos, ...itens]);
+      setLista("");
+    } else {
+      setErroLista("Não deu pra salvar a lista. Tente de novo.");
+    }
+    setEnviandoLista(false);
   }
 
   async function excluir(id) {
@@ -492,6 +523,25 @@ function SecaoContatos({ itens: itensIniciais }) {
         <div><p className="field-label">Número</p><input value={numero} onChange={(e) => setNumero(e.target.value)} className="field-input" /></div>
         <div className="flex items-end"><button onClick={adicionar} className="btn-primary w-full">Publicar</button></div>
       </div>
+
+      <div className="card mb-6">
+        <p className="field-label">Colar lista (vários de uma vez)</p>
+        <textarea
+          value={lista}
+          onChange={(e) => setLista(e.target.value)}
+          rows={5}
+          className="field-input mb-2"
+          placeholder={"nome,categoria,número; outro nome,categoria,número"}
+        />
+        <p className="mb-3 text-xs text-muted">
+          Vírgula separa nome, categoria e número. Ponto e vírgula separa um contato do outro.
+        </p>
+        <button onClick={adicionarLista} disabled={enviandoLista || !lista.trim()} className="btn-primary w-full">
+          {enviandoLista ? "Publicando..." : "Publicar lista"}
+        </button>
+        {erroLista && <p className="mt-2 text-xs text-rust">{erroLista}</p>}
+      </div>
+
       <div className="flex flex-col gap-2">
         {itens.map((i) => (
           <div key={i.id} className="flex items-center justify-between gap-2 rounded-sm border border-border bg-surface p-3">
