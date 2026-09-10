@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { garantirPerfilUsuario } from "@/lib/perfil";
 import { DashboardChrome } from "@/components/DashboardChrome";
 
 export default async function DashboardLayout({ children }) {
@@ -12,5 +13,14 @@ export default async function DashboardLayout({ children }) {
     redirect("/");
   }
 
-  return <DashboardChrome user={user}>{children}</DashboardChrome>;
+  const perfil = await garantirPerfilUsuario(supabase, user.id);
+  if (!perfil.telefone) {
+    redirect("/completar-cadastro");
+  }
+
+  return (
+    <DashboardChrome user={user} telefone={perfil.telefone}>
+      {children}
+    </DashboardChrome>
+  );
 }

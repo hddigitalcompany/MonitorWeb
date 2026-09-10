@@ -283,3 +283,10 @@ create policy "Usuário vê e gerencia seu próprio perfil"
 create policy "Admin vê todos os perfis"
   on public.perfis_usuario for select
   using (exists (select 1 from public.admins where user_id = auth.uid()));
+
+-- ============================================================
+-- TELEFONE NO PERFIL (preenchido uma única vez, no cadastro,
+-- antes da pessoa acessar o app pela primeira vez)
+-- ============================================================
+
+alter table public.perfis_usuario add column if not exists telefone text;

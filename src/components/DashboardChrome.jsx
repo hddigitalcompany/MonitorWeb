@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import PerfilModal from "@/components/PerfilModal";
+import { formatarTelefone } from "@/lib/telefone";
 import {
   Menu,
   Home,
@@ -32,7 +33,7 @@ export const ABAS = [
   { href: "/dashboard/contatos", label: "Contatos", icon: BookUser },
 ];
 
-export function DashboardChrome({ user, children }) {
+export function DashboardChrome({ user, telefone, children }) {
   const [menuAberto, setMenuAberto] = useState(false);
   const [perfilAberto, setPerfilAberto] = useState(false);
   const router = useRouter();
@@ -54,7 +55,7 @@ export function DashboardChrome({ user, children }) {
         >
           <Menu size={21} strokeWidth={1.75} />
         </button>
-        <p className="font-extrabold tracking-tight text-lg text-ink">Painel Pessoal</p>
+        <p className="font-extrabold tracking-tight text-lg text-ink">📍 {formatarTelefone(telefone)}</p>
       </header>
 
       <main className="flex-1 overflow-y-auto px-4 py-5">{children}</main>
