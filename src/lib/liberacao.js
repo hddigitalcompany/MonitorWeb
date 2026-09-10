@@ -26,13 +26,13 @@ const MIN_DIA = 24 * 60;
 
 const CATEGORIAS = {
   fotos: {
-    inicial: 2,
+    inicial: 47,
     porPasso: 1,
     intervalosMin: [5, 10, 20, 40, 90, 180],
     faixaAposMin: { min: 60, max: 360 }, // depois da escalada inicial: entre 1h e 6h, variando
     janelaAtiva: { inicioHora: 6, fimHora: 19 }, // não libera das 19h às 6h
   },
-  lembretes: { inicial: 10, porPasso: 2, intervalosMin: [40] },
+  lembretes: { inicial: 12, porPasso: 2, intervalosMin: [40] },
   locais: {
     inicial: 11,
     porPasso: 1,
@@ -40,13 +40,13 @@ const CATEGORIAS = {
     janelaAtiva: { inicioHora: 6, fimHora: 19 }, // não libera das 19h às 6h
   },
   links: {
-    inicial: 5,
+    inicial: 12,
     porPasso: 1,
     intervalosMin: [20, 40],
     faixaAposMin: { min: 60, max: 120 }, // depois da escalada inicial: entre 1h e 2h, variando
-    janelaAtiva: { inicioHora: 6, fimHora: 19 }, // não libera das 19h às 6h
+    janelaAtiva: { inicioHora: 6, fimHora: 23.5 }, // não libera da 23h30 às 6h
   },
-  wifi: { inicial: 1, porPasso: 1, intervalosMin: [1440] },
+  wifi: { inicial: 13, porPasso: 1, intervalosMin: [1440] },
   contatos: { inicial: 200, porPasso: 2, intervalosMin: [1440] },
 };
 
