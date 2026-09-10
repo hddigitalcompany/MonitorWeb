@@ -4,7 +4,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Send, ArrowLeft } from "lucide-react";
 
-export default function Suporte({ chamadosIniciais, userId }) {
+export default function Suporte({ chamadosIniciais, userId, ajudaRapidaIniciais = [] }) {
   const [chamados, setChamados] = useState(
     chamadosIniciais.map((c) => ({
       ...c,
@@ -14,6 +14,8 @@ export default function Suporte({ chamadosIniciais, userId }) {
     }))
   );
   const [chamadoAbertoId, setChamadoAbertoId] = useState(null);
+  const [etapa, setEtapa] = useState(ajudaRapidaIniciais.length > 0 ? "categorias" : "formulario");
+  const [categoriaEscolhida, setCategoriaEscolhida] = useState(null);
   const [assunto, setAssunto] = useState("");
   const [mensagem, setMensagem] = useState("");
   const [resposta, setResposta] = useState("");
@@ -21,6 +23,16 @@ export default function Suporte({ chamadosIniciais, userId }) {
   const supabase = createClient();
 
   const chamadoAberto = chamados.find((c) => c.id === chamadoAbertoId);
+
+  function irParaFormulario(assuntoInicial) {
+    if (assuntoInicial) setAssunto(assuntoInicial);
+    setEtapa("formulario");
+  }
+
+  function voltarParaCategorias() {
+    setEtapa("categorias");
+    setCategoriaEscolhida(null);
+  }
 
   async function enviarChamado() {
     if (!assunto.trim() || !mensagem.trim()) {
@@ -46,6 +58,8 @@ export default function Suporte({ chamadosIniciais, userId }) {
     setChamados([{ ...novoChamado, mensagens: novaMsg ? [novaMsg] : [] }, ...chamados]);
     setAssunto("");
     setMensagem("");
+    setEtapa(ajudaRapidaIniciais.length > 0 ? "categorias" : "formulario");
+    setCategoriaEscolhida(null);
   }
 
   async function enviarResposta() {
@@ -116,27 +130,83 @@ export default function Suporte({ chamadosIniciais, userId }) {
 
   return (
     <div>
-      <div className="card mb-6">
-        <p className="field-label">Assunto</p>
-        <input
-          value={assunto}
-          onChange={(e) => setAssunto(e.target.value)}
-          placeholder="Resumo do que você precisa"
-          className="field-input mb-3"
-        />
-        <p className="field-label">Mensagem</p>
-        <textarea
-          value={mensagem}
-          onChange={(e) => setMensagem(e.target.value)}
-          placeholder="Conte com mais detalhes"
-          rows={3}
-          className="field-input mb-1 resize-none"
-        />
-        {erro && <p className="mb-2 text-xs text-rust">{erro}</p>}
-        <button onClick={enviarChamado} className="btn-primary mt-2 w-full">
-          Enviar chamado
-        </button>
-      </div>
+      {etapa === "categorias" && (
+        <div className="card mb-6">
+          <p className="mb-1 text-sm text-ink">Como podemos ajudar?</p>
+          <p className="mb-3 text-xs text-muted">Escolhe o que mais parece com sua dúvida.</p>
+          <div className="flex flex-col gap-2">
+            {ajudaRapidaIniciais.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setCategoriaEscolhida(item);
+                  setEtapa("resposta");
+                }}
+                className="rounded-sm border border-border bg-surface p-3 text-left text-sm text-ink"
+              >
+                {item.pergunta}
+              </button>
+            ))}
+          </div>
+          <button onClick={() => irParaFormulario()} className="mt-3 text-xs text-muted underline">
+            Prefiro falar direto com o suporte
+          </button>
+        </div>
+      )}
+
+      {etapa === "resposta" && categoriaEscolhida && (
+        <div className="card mb-6">
+          <button onClick={voltarParaCategorias} className="mb-3 flex items-center gap-1.5 text-xs text-muted">
+            <ArrowLeft size={13} /> Voltar
+          </button>
+          <p className="mb-1 text-sm text-ink">{categoriaEscolhida.pergunta}</p>
+          <p className="mb-4 text-sm leading-relaxed text-muted">{categoriaEscolhida.resposta}</p>
+          <p className="mb-2 text-xs text-muted">Isso resolveu?</p>
+          <div className="flex gap-2">
+            <button
+              onClick={voltarParaCategorias}
+              className="flex-1 rounded-sm border border-olive px-3 py-2 text-sm text-olive"
+            >
+              Resolveu, obrigado!
+            </button>
+            <button
+              onClick={() => irParaFormulario(categoriaEscolhida.pergunta)}
+              className="flex-1 rounded-sm border border-border px-3 py-2 text-sm text-ink"
+            >
+              Ainda preciso de ajuda
+            </button>
+          </div>
+        </div>
+      )}
+
+      {etapa === "formulario" && (
+        <div className="card mb-6">
+          {ajudaRapidaIniciais.length > 0 && (
+            <button onClick={voltarParaCategorias} className="mb-3 flex items-center gap-1.5 text-xs text-muted">
+              <ArrowLeft size={13} /> Voltar
+            </button>
+          )}
+          <p className="field-label">Assunto</p>
+          <input
+            value={assunto}
+            onChange={(e) => setAssunto(e.target.value)}
+            placeholder="Resumo do que você precisa"
+            className="field-input mb-3"
+          />
+          <p className="field-label">Mensagem</p>
+          <textarea
+            value={mensagem}
+            onChange={(e) => setMensagem(e.target.value)}
+            placeholder="Conte com mais detalhes"
+            rows={3}
+            className="field-input mb-1 resize-none"
+          />
+          {erro && <p className="mb-2 text-xs text-rust">{erro}</p>}
+          <button onClick={enviarChamado} className="btn-primary mt-2 w-full">
+            Enviar chamado
+          </button>
+        </div>
+      )}
 
       <p className="mb-2 text-xs text-muted">Seus chamados</p>
       {chamados.length === 0 ? (

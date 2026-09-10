@@ -66,6 +66,7 @@ export default async function AdminPage() {
     wifiDicas,
     contatos,
     textos,
+    ajudaRapida,
     chamados,
     { clientes, erroConfig },
   ] = await Promise.all([
@@ -77,6 +78,7 @@ export default async function AdminPage() {
     supabase.from("conteudo_wifi_dicas").select("*").order("criado_em", { ascending: false }),
     supabase.from("conteudo_contatos").select("*").order("criado_em", { ascending: false }),
     supabase.from("conteudo_textos").select("*"),
+    supabase.from("conteudo_ajuda_rapida").select("*").order("criado_em", { ascending: true }),
     supabase
       .from("chamados_suporte")
       .select("*, mensagens_suporte(*)")
@@ -95,6 +97,7 @@ export default async function AdminPage() {
         wifiDicas: wifiDicas.data || [],
         contatos: contatos.data || [],
         textos: textos.data || [],
+        ajudaRapida: ajudaRapida.data || [],
         chamados: chamados.data || [],
         clientes,
         erroClientes: erroConfig,

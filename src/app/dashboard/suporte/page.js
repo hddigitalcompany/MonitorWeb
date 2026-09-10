@@ -16,10 +16,19 @@ export default async function SuportePage() {
     .eq("user_id", user.id)
     .order("criado_em", { ascending: false });
 
+  const { data: ajudaRapida } = await supabase
+    .from("conteudo_ajuda_rapida")
+    .select("*")
+    .order("criado_em", { ascending: true });
+
   return (
     <div>
       <PageHeader title={texto(textos, "suporte_titulo")} subtitle={texto(textos, "suporte_subtitulo")} />
-      <Suporte chamadosIniciais={chamados || []} userId={user.id} />
+      <Suporte
+        chamadosIniciais={chamados || []}
+        userId={user.id}
+        ajudaRapidaIniciais={ajudaRapida || []}
+      />
     </div>
   );
 }

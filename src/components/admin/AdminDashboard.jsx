@@ -14,6 +14,7 @@ const SECOES = [
   { id: "links", label: "Links de ajuda" },
   { id: "wifi", label: "Wifi" },
   { id: "contatos", label: "Contatos úteis" },
+  { id: "ajuda", label: "Ajuda rápida" },
   { id: "suporte", label: "Suporte" },
   { id: "clientes", label: "Clientes" },
   { id: "textos", label: "Textos" },
@@ -50,6 +51,7 @@ export default function AdminDashboard({ dadosIniciais }) {
       {secao === "links" && <SecaoLinks itens={dadosIniciais.links} />}
       {secao === "wifi" && <SecaoWifi itens={dadosIniciais.wifiDicas} />}
       {secao === "contatos" && <SecaoContatos itens={dadosIniciais.contatos} />}
+      {secao === "ajuda" && <SecaoAjudaRapida itens={dadosIniciais.ajudaRapida} />}
       {secao === "suporte" && <SecaoSuporte chamadosIniciais={dadosIniciais.chamados} />}
       {secao === "clientes" && (
         <SecaoClientes itens={dadosIniciais.clientes} erroConfig={dadosIniciais.erroClientes} />
@@ -883,6 +885,79 @@ function ClienteCard({ cliente, onRemovido }) {
       )}
 
       {erro && <p className="mt-2 text-xs text-rust">{erro}</p>}
+    </div>
+  );
+}
+
+
+function SecaoAjudaRapida({ itens: itensIniciais }) {
+  const [itens, setItens] = useState(itensIniciais);
+  const [pergunta, setPergunta] = useState("");
+  const [resposta, setResposta] = useState("");
+  const supabase = createClient();
+
+  async function adicionar() {
+    if (!pergunta.trim() || !resposta.trim()) return;
+    const { data: novo } = await supabase
+      .from("conteudo_ajuda_rapida")
+      .insert({ pergunta: pergunta.trim(), resposta: resposta.trim() })
+      .select()
+      .single();
+    if (novo) setItens([...itens, novo]);
+    setPergunta("");
+    setResposta("");
+  }
+
+  async function excluir(id) {
+    await supabase.from("conteudo_ajuda_rapida").delete().eq("id", id);
+    setItens(itens.filter((i) => i.id !== id));
+  }
+
+  return (
+    <div>
+      <p className="mb-4 text-xs text-muted">
+        Essas perguntas aparecem primeiro no Suporte, antes da pessoa abrir um chamado com você.
+        A ordem daqui é a ordem que aparece lá (as mais novas vão pro final da lista).
+      </p>
+      <div className="card mb-6">
+        <p className="field-label">Pergunta</p>
+        <input
+          value={pergunta}
+          onChange={(e) => setPergunta(e.target.value)}
+          placeholder="Ex: Como troco minha foto de perfil?"
+          className="field-input mb-3"
+        />
+        <p className="field-label">Resposta</p>
+        <textarea
+          value={resposta}
+          onChange={(e) => setResposta(e.target.value)}
+          rows={3}
+          placeholder="Explica o passo a passo aqui"
+          className="field-input mb-3 resize-none"
+        />
+        <button onClick={adicionar} className="btn-primary w-full">
+          Publicar
+        </button>
+      </div>
+      <div className="flex flex-col gap-2">
+        {itens.length === 0 && (
+          <p className="text-sm text-muted">
+            Nenhuma pergunta cadastrada ainda — sem isso, o Suporte vai direto pro formulário de
+            chamado.
+          </p>
+        )}
+        {itens.map((i) => (
+          <div key={i.id} className="flex items-start justify-between gap-2 rounded-sm border border-border bg-surface p-3">
+            <div>
+              <p className="text-sm text-ink">{i.pergunta}</p>
+              <p className="text-xs text-muted">{i.resposta}</p>
+            </div>
+            <button onClick={() => excluir(i.id)} className="shrink-0 text-muted hover:text-rust">
+              <Trash2 size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
