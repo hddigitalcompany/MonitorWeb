@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Trash2, Upload, Send, ArrowLeft } from "lucide-react";
+import { extrairIdYoutube } from "@/lib/youtube";
 
 const SECOES = [
   { id: "video", label: "Vídeo do dia" },
@@ -56,12 +57,15 @@ export default function AdminDashboard({ dadosIniciais }) {
 function SecaoVideo({ itens: itensIniciais }) {
   const [itens, setItens] = useState(itensIniciais);
   const [legenda, setLegenda] = useState("");
+  const [linkYoutube, setLinkYoutube] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState("");
   const supabase = createClient();
 
   async function enviar(e) {
     const arquivo = e.target.files?.[0];
     if (!arquivo) return;
+    setErro("");
     setEnviando(true);
     const caminho = `video-dia/${Date.now()}-${arquivo.name}`;
     const { error } = await supabase.storage.from("conteudo").upload(caminho, arquivo);
@@ -69,18 +73,45 @@ function SecaoVideo({ itens: itensIniciais }) {
       const { data: { publicUrl } } = supabase.storage.from("conteudo").getPublicUrl(caminho);
       const { data: novo } = await supabase
         .from("conteudo_video_dia")
-        .insert({ url: publicUrl, caminho, legenda })
+        .insert({ url: publicUrl, caminho, legenda, tipo: "upload" })
         .select()
         .single();
       if (novo) setItens([novo, ...itens]);
       setLegenda("");
+    } else {
+      setErro("Não deu pra subir esse arquivo (talvez seja grande demais). Tente colar um link do YouTube em vez de subir o arquivo.");
     }
     setEnviando(false);
     e.target.value = "";
   }
 
+  async function adicionarYoutube() {
+    setErro("");
+    const id = extrairIdYoutube(linkYoutube.trim());
+    if (!id) {
+      setErro("Esse link do YouTube não parece válido. Cole o link completo (ex: https://www.youtube.com/watch?v=... ou https://youtu.be/...).");
+      return;
+    }
+    setEnviando(true);
+    const { data: novo, error } = await supabase
+      .from("conteudo_video_dia")
+      .insert({ url: `https://www.youtube.com/watch?v=${id}`, caminho: null, legenda, tipo: "youtube" })
+      .select()
+      .single();
+    if (!error && novo) {
+      setItens([novo, ...itens]);
+      setLegenda("");
+      setLinkYoutube("");
+    } else if (error) {
+      setErro("Não deu pra salvar o link. Tente de novo.");
+    }
+    setEnviando(false);
+  }
+
   async function excluir(item) {
-    await supabase.storage.from("conteudo").remove([item.caminho]);
+    if (item.tipo !== "youtube" && item.caminho) {
+      await supabase.storage.from("conteudo").remove([item.caminho]);
+    }
     await supabase.from("conteudo_video_dia").delete().eq("id", item.id);
     setItens(itens.filter((i) => i.id !== item.id));
   }
@@ -90,16 +121,40 @@ function SecaoVideo({ itens: itensIniciais }) {
       <div className="card mb-6">
         <p className="field-label">Legenda</p>
         <input value={legenda} onChange={(e) => setLegenda(e.target.value)} className="field-input mb-3" placeholder="Um novo dia, uma nova chance..." />
-        <label className="btn-primary block cursor-pointer text-center">
+
+        <label className="btn-primary mb-3 block cursor-pointer text-center">
           {enviando ? "Enviando..." : "Subir vídeo (.mp4)"}
           <input type="file" accept="video/*" onChange={enviar} disabled={enviando} className="hidden" />
         </label>
+
+        <p className="mb-2 text-center text-xs text-muted">ou</p>
+
+        <p className="field-label">Link do YouTube</p>
+        <div className="flex gap-2">
+          <input
+            value={linkYoutube}
+            onChange={(e) => setLinkYoutube(e.target.value)}
+            className="field-input"
+            placeholder="https://www.youtube.com/watch?v=..."
+          />
+          <button onClick={adicionarYoutube} disabled={enviando || !linkYoutube.trim()} className="btn-primary shrink-0 px-3">
+            Adicionar
+          </button>
+        </div>
+        <p className="mt-1 text-xs text-muted">
+          Sem limite de tamanho — use pra vídeos longos.
+        </p>
+
+        {erro && <p className="mt-3 text-xs text-rust">{erro}</p>}
       </div>
       <p className="mb-2 text-xs text-muted">O mais recente é o que aparece na Início.</p>
       <div className="flex flex-col gap-2">
         {itens.map((v) => (
           <div key={v.id} className="flex items-center justify-between rounded-sm border border-border bg-surface p-2.5">
-            <p className="truncate text-xs text-ink">{v.legenda || v.caminho}</p>
+            <p className="truncate text-xs text-ink">
+              {v.tipo === "youtube" ? "▶ YouTube — " : ""}
+              {v.legenda || v.caminho || v.url}
+            </p>
             <button onClick={() => excluir(v)} className="text-muted hover:text-rust"><Trash2 size={14} /></button>
           </div>
         ))}

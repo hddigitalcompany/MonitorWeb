@@ -35,7 +35,8 @@ create table if not exists public.conteudo_fotos (
 create table if not exists public.conteudo_video_dia (
   id uuid primary key default gen_random_uuid(),
   url text not null,
-  caminho text not null,
+  caminho text,
+  tipo text not null default 'upload',
   legenda text not null default '',
   criado_em timestamptz not null default now()
 );
