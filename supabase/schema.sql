@@ -261,3 +261,25 @@ create policy "Usuário sobe seu próprio avatar"
 create policy "Usuário substitui seu próprio avatar"
   on storage.objects for update
   using (bucket_id = 'avatares' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ============================================================
+-- PERFIS DE USUÁRIO (primeiro login e último acesso, usados pra
+-- liberar o conteúdo aos poucos pra cada pessoa)
+-- ============================================================
+
+create table if not exists public.perfis_usuario (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  primeiro_login timestamptz not null default now(),
+  ultimo_acesso timestamptz not null default now()
+);
+
+alter table public.perfis_usuario enable row level security;
+
+create policy "Usuário vê e gerencia seu próprio perfil"
+  on public.perfis_usuario for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "Admin vê todos os perfis"
+  on public.perfis_usuario for select
+  using (exists (select 1 from public.admins where user_id = auth.uid()));

@@ -1,19 +1,30 @@
 import { createClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/PageHeader";
 import { buscarTextos, texto } from "@/lib/textos";
+import { garantirPerfilUsuario } from "@/lib/perfil";
+import { quantidadeLiberada } from "@/lib/liberacao";
 
 export default async function ContatosPage() {
   const supabase = createClient();
   const textos = await buscarTextos(supabase);
-  const { data: contatos } = await supabase
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const perfil = await garantirPerfilUsuario(supabase, user.id);
+
+  const { data } = await supabase
     .from("conteudo_contatos")
     .select("*")
-    .order("criado_em", { ascending: false });
+    .order("criado_em", { ascending: true });
+
+  const todos = data || [];
+  const liberados = quantidadeLiberada("contatos", perfil.primeiro_login, new Date(), todos.length);
+  const contatos = todos.slice(0, liberados).reverse();
 
   return (
     <div>
       <PageHeader title={texto(textos, "contatos_titulo")} subtitle={texto(textos, "contatos_subtitulo")} />
-      {!contatos || contatos.length === 0 ? (
+      {contatos.length === 0 ? (
         <p className="text-sm text-muted">Nenhum contato publicado ainda.</p>
       ) : (
         <div className="flex flex-col gap-2">

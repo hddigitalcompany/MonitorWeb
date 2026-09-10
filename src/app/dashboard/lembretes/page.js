@@ -1,16 +1,26 @@
 import { createClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/PageHeader";
 import { buscarTextos, texto } from "@/lib/textos";
+import { garantirPerfilUsuario } from "@/lib/perfil";
+import { quantidadeLiberada } from "@/lib/liberacao";
 
 export default async function LembretesPage() {
   const supabase = createClient();
   const textos = await buscarTextos(supabase);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const perfil = await garantirPerfilUsuario(supabase, user.id);
+
   const { data } = await supabase
     .from("conteudo_lembretes")
     .select("*")
-    .order("criado_em", { ascending: false });
+    .order("criado_em", { ascending: true });
 
-  const itens = (data || []).slice().sort((a, b) => {
+  const todos = data || [];
+  const liberados = quantidadeLiberada("lembretes", perfil.primeiro_login, new Date(), todos.length);
+
+  const itens = todos.slice(0, liberados).sort((a, b) => {
     if (!a.hora && !b.hora) return 0;
     if (!a.hora) return 1;
     if (!b.hora) return -1;
