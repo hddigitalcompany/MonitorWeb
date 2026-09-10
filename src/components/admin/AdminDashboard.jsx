@@ -210,9 +210,7 @@ function SecaoFotos({ itens: itensIniciais }) {
 
 function SecaoLembretes({ itens: itensIniciais }) {
   const [itens, setItens] = useState(itensIniciais);
-  const [hora, setHora] = useState("");
-  const [lembrete, setLembrete] = useState("");
-  const [atividade, setAtividade] = useState("");
+  const [linha, setLinha] = useState("");
   const supabase = createClient();
 
   function ordenar(a, b) {
@@ -223,16 +221,21 @@ function SecaoLembretes({ itens: itensIniciais }) {
   }
 
   async function adicionar() {
-    if (!lembrete.trim()) return;
+    const partes = linha.split(",").map((p) => p.trim());
+    const [hora, lembrete, ...resto] = partes;
+    if (!lembrete) return;
+    const atividade = resto.join(", ").trim();
     const { data: novo } = await supabase
       .from("conteudo_lembretes")
-      .insert({ hora: hora || null, texto: lembrete.trim(), atividade: atividade.trim() || null })
+      .insert({ hora: hora || null, texto: lembrete, atividade: atividade || null })
       .select()
       .single();
     if (novo) setItens([...itens, novo].sort(ordenar));
-    setHora("");
-    setLembrete("");
-    setAtividade("");
+    setLinha("");
+  }
+
+  function aoTeclar(e) {
+    if (e.key === "Enter") adicionar();
   }
 
   async function excluir(id) {
@@ -243,23 +246,18 @@ function SecaoLembretes({ itens: itensIniciais }) {
   return (
     <div>
       <div className="card mb-6">
-        <p className="field-label">Hora</p>
-        <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} className="field-input mb-3" />
-        <p className="field-label">Lembrete</p>
-        <input
-          value={lembrete}
-          onChange={(e) => setLembrete(e.target.value)}
-          placeholder="Ex: Ligar pra vovó"
-          className="field-input mb-3"
-        />
-        <p className="field-label">Atividade</p>
-        <input
-          value={atividade}
-          onChange={(e) => setAtividade(e.target.value)}
-          placeholder="Ex: Perguntar sobre a consulta"
-          className="field-input mb-3"
-        />
-        <button onClick={adicionar} className="btn-primary w-full">Publicar</button>
+        <p className="field-label">Hora, lembrete, atividade</p>
+        <div className="flex gap-2">
+          <input
+            value={linha}
+            onChange={(e) => setLinha(e.target.value)}
+            onKeyDown={aoTeclar}
+            placeholder="0817, academia, treino de peito 8"
+            className="field-input"
+          />
+          <button onClick={adicionar} className="btn-primary shrink-0">Publicar</button>
+        </div>
+        <p className="mt-1 text-xs text-muted">Separe por vírgula, nessa ordem: hora, lembrete, atividade.</p>
       </div>
       <div className="flex flex-col gap-2">
         {[...itens].sort(ordenar).map((i) => (
