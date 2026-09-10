@@ -226,6 +226,9 @@ function SecaoFotos({ itens: itensIniciais }) {
 function SecaoLembretes({ itens: itensIniciais }) {
   const [itens, setItens] = useState(itensIniciais);
   const [linha, setLinha] = useState("");
+  const [lista, setLista] = useState("");
+  const [enviandoLista, setEnviandoLista] = useState(false);
+  const [erroLista, setErroLista] = useState("");
   const supabase = createClient();
 
   function ordenar(a, b) {
@@ -270,6 +273,37 @@ function SecaoLembretes({ itens: itensIniciais }) {
     setLinha("");
   }
 
+  async function adicionarLista() {
+    setErroLista("");
+    const entradas = lista
+      .split(/;|\s+\.\s+/)
+      .map((item) => item.trim().replace(/\.$/, "").trim())
+      .filter(Boolean)
+      .map((item) => {
+        const [horaBruta, lembrete, ...resto] = item.split(",").map((p) => p.trim());
+        if (!lembrete) return null;
+        const hora = formatarHora(horaBruta);
+        const atividade = formatarHorasNoTexto(resto.join(", ").trim());
+        return { hora: hora || null, texto: lembrete, atividade: atividade || null };
+      })
+      .filter(Boolean);
+
+    if (entradas.length === 0) {
+      setErroLista("Não encontrei nenhum item válido. Use: hora, lembrete, atividade; hora, lembrete, atividade");
+      return;
+    }
+
+    setEnviandoLista(true);
+    const { data: novos, error } = await supabase.from("conteudo_lembretes").insert(entradas).select();
+    if (!error && novos) {
+      setItens([...itens, ...novos].sort(ordenar));
+      setLista("");
+    } else {
+      setErroLista("Não deu pra salvar a lista. Tente de novo.");
+    }
+    setEnviandoLista(false);
+  }
+
   function aoTeclar(e) {
     if (e.key === "Enter") adicionar();
   }
@@ -295,6 +329,25 @@ function SecaoLembretes({ itens: itensIniciais }) {
         </div>
         <p className="mt-1 text-xs text-muted">Separe por vírgula, nessa ordem: hora, lembrete, atividade.</p>
       </div>
+
+      <div className="card mb-6">
+        <p className="field-label">Colar lista (vários de uma vez)</p>
+        <textarea
+          value={lista}
+          onChange={(e) => setLista(e.target.value)}
+          rows={5}
+          className="field-input mb-2"
+          placeholder={"0817, academia, treino de peito 8; 1200, almoço, levar remédio"}
+        />
+        <p className="mb-3 text-xs text-muted">
+          Vírgula separa hora, lembrete e atividade. Ponto e vírgula separa um item do outro.
+        </p>
+        <button onClick={adicionarLista} disabled={enviandoLista || !lista.trim()} className="btn-primary w-full">
+          {enviandoLista ? "Publicando..." : "Publicar lista"}
+        </button>
+        {erroLista && <p className="mt-2 text-xs text-rust">{erroLista}</p>}
+      </div>
+
       <div className="flex flex-col gap-2">
         {[...itens].sort(ordenar).map((i) => (
           <div key={i.id} className="flex items-center justify-between gap-2 rounded-sm border border-border bg-surface p-3">
