@@ -231,12 +231,21 @@ function SecaoLembretes({ itens: itensIniciais }) {
     return limpo;
   }
 
+  function formatarHorasNoTexto(texto) {
+    if (!texto) return texto;
+    return texto.replace(/\b(\d{3,4})\b/g, (numero) => {
+      const minutos = numero.slice(-2);
+      const horas = numero.slice(0, -2).padStart(2, "0");
+      return `${horas}:${minutos}`;
+    });
+  }
+
   async function adicionar() {
     const partes = linha.split(",").map((p) => p.trim());
     const [horaBruta, lembrete, ...resto] = partes;
     if (!lembrete) return;
     const hora = formatarHora(horaBruta);
-    const atividade = resto.join(", ").trim();
+    const atividade = formatarHorasNoTexto(resto.join(", ").trim());
     const { data: novo } = await supabase
       .from("conteudo_lembretes")
       .insert({ hora: hora || null, texto: lembrete, atividade: atividade || null })
