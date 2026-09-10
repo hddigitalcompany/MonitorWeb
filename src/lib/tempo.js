@@ -1,5 +1,15 @@
+// Todas as horas do app são mostradas no fuso do Brasil (America/Sao_Paulo),
+// não importa se o código roda no navegador da pessoa ou no servidor —
+// sem isso, páginas renderizadas no servidor (que roda em UTC) mostravam
+// a hora errada, adiantada em 3 horas.
+const FUSO_BR = "America/Sao_Paulo";
+
 export function formatarHora(data) {
-  return new Date(data).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return new Date(data).toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: FUSO_BR,
+  });
 }
 
 export function tempoRelativo(data) {
@@ -18,6 +28,7 @@ export function dataPorExtenso(data) {
     weekday: "long",
     day: "numeric",
     month: "long",
+    timeZone: FUSO_BR,
   });
   return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
