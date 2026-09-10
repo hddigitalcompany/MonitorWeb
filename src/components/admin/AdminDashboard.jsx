@@ -7,6 +7,9 @@ import { extrairIdYoutube } from "@/lib/youtube";
 import { TEXTOS_PADRAO } from "@/lib/textos";
 import { calcularEtapaReembolso } from "@/lib/reembolso";
 import { formatarHora } from "@/lib/tempo";
+import { ABAS } from "@/components/DashboardChrome";
+
+const ROTAS_PREVIEW = [{ href: "/dashboard/inicio", label: "Início" }, ...ABAS.filter((a) => a.href !== "/dashboard/inicio")];
 
 const SECOES = [
   { id: "video", label: "Vídeo do dia" },
@@ -25,44 +28,77 @@ const SECOES = [
 
 export default function AdminDashboard({ dadosIniciais }) {
   const [secao, setSecao] = useState("video");
+  const [previewRota, setPreviewRota] = useState("/dashboard/inicio");
+  const [previewKey, setPreviewKey] = useState(0);
 
   return (
-    <div className="mx-auto max-w-2xl px-5 py-8">
-      <p className="mb-1 font-extrabold tracking-tight text-2xl text-ink">Administração</p>
-      <p className="mb-6 text-sm text-muted">Publique conteúdo e responda chamados de suporte.</p>
+    <div className="flex min-h-dvh flex-col lg:flex-row">
+      <div className="mx-auto w-full max-w-2xl flex-1 px-5 py-8">
+        <p className="mb-1 font-extrabold tracking-tight text-2xl text-ink">Administração</p>
+        <p className="mb-6 text-sm text-muted">Publique conteúdo e responda chamados de suporte.</p>
 
-      <div className="mb-6 flex flex-wrap gap-1.5 border-b border-border pb-4">
-        {SECOES.map((s) => (
-          <button
-            key={s.id}
-            onClick={() => setSecao(s.id)}
-            className={`rounded-sm px-3 py-1.5 text-xs ${
-              secao === s.id ? "bg-amber text-ink" : "border border-border text-muted"
-            }`}
-          >
-            {s.label}
-          </button>
-        ))}
+        <div className="mb-6 flex flex-wrap gap-1.5 border-b border-border pb-4">
+          {SECOES.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => setSecao(s.id)}
+              className={`rounded-sm px-3 py-1.5 text-xs ${
+                secao === s.id ? "bg-amber text-ink" : "border border-border text-muted"
+              }`}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+
+        {secao === "video" && <SecaoVideo itens={dadosIniciais.videos} />}
+        {secao === "fotos" && <SecaoFotos itens={dadosIniciais.fotos} />}
+        {secao === "locais" && (
+          <SecaoTexto tabela="conteudo_locais" itens={dadosIniciais.locais} placeholder="Sugestão de local seguro" />
+        )}
+        {secao === "lembretes" && <SecaoLembretes itens={dadosIniciais.lembretes} />}
+        {secao === "links" && <SecaoLinks itens={dadosIniciais.links} />}
+        {secao === "wifi" && <SecaoWifi itens={dadosIniciais.wifiDicas} />}
+        {secao === "contatos" && <SecaoContatos itens={dadosIniciais.contatos} />}
+        {secao === "ajuda" && <SecaoAjudaRapida itens={dadosIniciais.ajudaRapida} />}
+        {secao === "suporte" && <SecaoSuporte chamadosIniciais={dadosIniciais.chamados} />}
+        {secao === "clientes" && (
+          <SecaoClientes itens={dadosIniciais.clientes} erroConfig={dadosIniciais.erroClientes} />
+        )}
+        {secao === "reembolsos" && (
+          <SecaoReembolsos itens={dadosIniciais.reembolsos} erroConfig={dadosIniciais.erroClientes} />
+        )}
+        {secao === "textos" && <SecaoTextos itens={dadosIniciais.textos} />}
       </div>
 
-      {secao === "video" && <SecaoVideo itens={dadosIniciais.videos} />}
-      {secao === "fotos" && <SecaoFotos itens={dadosIniciais.fotos} />}
-      {secao === "locais" && (
-        <SecaoTexto tabela="conteudo_locais" itens={dadosIniciais.locais} placeholder="Sugestão de local seguro" />
-      )}
-      {secao === "lembretes" && <SecaoLembretes itens={dadosIniciais.lembretes} />}
-      {secao === "links" && <SecaoLinks itens={dadosIniciais.links} />}
-      {secao === "wifi" && <SecaoWifi itens={dadosIniciais.wifiDicas} />}
-      {secao === "contatos" && <SecaoContatos itens={dadosIniciais.contatos} />}
-      {secao === "ajuda" && <SecaoAjudaRapida itens={dadosIniciais.ajudaRapida} />}
-      {secao === "suporte" && <SecaoSuporte chamadosIniciais={dadosIniciais.chamados} />}
-      {secao === "clientes" && (
-        <SecaoClientes itens={dadosIniciais.clientes} erroConfig={dadosIniciais.erroClientes} />
-      )}
-      {secao === "reembolsos" && (
-        <SecaoReembolsos itens={dadosIniciais.reembolsos} erroConfig={dadosIniciais.erroClientes} />
-      )}
-      {secao === "textos" && <SecaoTextos itens={dadosIniciais.textos} />}
+      <div className="hidden shrink-0 flex-col items-center gap-3 border-l border-border bg-surface2 px-6 py-8 lg:flex">
+        <p className="text-xs text-muted">Prévia ao vivo (como o app está agora)</p>
+        <div className="flex items-center gap-2">
+          <select
+            value={previewRota}
+            onChange={(e) => setPreviewRota(e.target.value)}
+            className="field-input py-1.5 text-xs"
+          >
+            {ROTAS_PREVIEW.map(({ href, label }) => (
+              <option key={href} value={href}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={() => setPreviewKey((k) => k + 1)}
+            className="btn-secondary shrink-0 px-3 py-1.5 text-xs"
+          >
+            Atualizar
+          </button>
+        </div>
+        <div
+          className="overflow-hidden rounded-[2rem] border-4 border-ink bg-surface shadow-lg"
+          style={{ width: 380, height: 780 }}
+        >
+          <iframe key={previewKey} src={previewRota} title="Prévia do app" className="h-full w-full border-0" />
+        </div>
+      </div>
     </div>
   );
 }
