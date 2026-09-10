@@ -75,9 +75,11 @@ export default async function InicioPage() {
         </div>
       </div>
 
+      <p className="mb-2 text-xs text-muted">Atualizações</p>
       <div className="mb-6 rounded-sm bg-amber p-5">
         <div className="flex items-start justify-between">
           <div>
+            <p className="mb-0.5 text-xs font-medium text-ink/70">Atualização de conteúdo</p>
             <p className="font-extrabold tracking-tight text-3xl text-ink">
               {totalNovos > 0 ? `+${totalNovos}` : "Tudo em dia"}
             </p>
@@ -97,7 +99,7 @@ export default async function InicioPage() {
           </div>
           <div>
             <p className="text-sm font-extrabold text-ink">{totalLiberadoGeral}</p>
-            <p className="text-[10px] text-ink/70">itens liberados no total</p>
+            <p className="text-[10px] text-ink/70">itens atualizados no total</p>
           </div>
         </div>
       </div>
