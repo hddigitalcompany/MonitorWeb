@@ -337,6 +337,9 @@ function SecaoLinks({ itens: itensIniciais }) {
   const [itens, setItens] = useState(itensIniciais);
   const [texto, setTexto] = useState("");
   const [url, setUrl] = useState("");
+  const [lista, setLista] = useState("");
+  const [enviandoLista, setEnviandoLista] = useState(false);
+  const [erroLista, setErroLista] = useState("");
   const supabase = createClient();
 
   async function adicionar() {
@@ -344,6 +347,38 @@ function SecaoLinks({ itens: itensIniciais }) {
     const { data: novo } = await supabase.from("conteudo_links").insert({ texto: texto.trim(), url: url.trim() || null }).select().single();
     if (novo) setItens([novo, ...itens]);
     setTexto(""); setUrl("");
+  }
+
+  async function adicionarLista() {
+    setErroLista("");
+    const entradas = lista
+      .split(";")
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((item) => {
+        const virgula = item.indexOf(",");
+        if (virgula === -1) return { texto: item.trim(), url: null };
+        return {
+          texto: item.slice(0, virgula).trim(),
+          url: item.slice(virgula + 1).trim() || null,
+        };
+      })
+      .filter((item) => item.texto);
+
+    if (entradas.length === 0) {
+      setErroLista("Não encontrei nenhum item válido. Use: descrição,link; descrição,link");
+      return;
+    }
+
+    setEnviandoLista(true);
+    const { data: novos, error } = await supabase.from("conteudo_links").insert(entradas).select();
+    if (!error && novos) {
+      setItens([...novos, ...itens]);
+      setLista("");
+    } else {
+      setErroLista("Não deu pra salvar a lista. Tente de novo.");
+    }
+    setEnviandoLista(false);
   }
 
   async function excluir(id) {
@@ -360,6 +395,25 @@ function SecaoLinks({ itens: itensIniciais }) {
         <input value={url} onChange={(e) => setUrl(e.target.value)} className="field-input mb-3" placeholder="https://..." />
         <button onClick={adicionar} className="btn-primary w-full">Publicar</button>
       </div>
+
+      <div className="card mb-6">
+        <p className="field-label">Colar lista (vários de uma vez)</p>
+        <textarea
+          value={lista}
+          onChange={(e) => setLista(e.target.value)}
+          rows={5}
+          className="field-input mb-2"
+          placeholder={"descrição do site,https://link.com; outro site,https://outrolink.com"}
+        />
+        <p className="mb-3 text-xs text-muted">
+          Vírgula separa descrição do link. Ponto e vírgula separa um item do outro.
+        </p>
+        <button onClick={adicionarLista} disabled={enviandoLista || !lista.trim()} className="btn-primary w-full">
+          {enviandoLista ? "Publicando..." : "Publicar lista"}
+        </button>
+        {erroLista && <p className="mt-2 text-xs text-rust">{erroLista}</p>}
+      </div>
+
       <div className="flex flex-col gap-2">
         {itens.map((i) => (
           <div key={i.id} className="flex items-start justify-between gap-2 rounded-sm border border-border bg-surface p-3">
