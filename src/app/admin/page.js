@@ -24,7 +24,8 @@ async function buscarClientes(supabase) {
       .sort((a, b) => (a.nome || a.email).localeCompare(b.nome || b.email));
 
     return { clientes, erroConfig: false };
-  } catch {
+  } catch (err) {
+    console.error('[admin/clientes] erro ao buscar clientes:', err?.message || err);
     return { clientes: [], erroConfig: true };
   }
 }
