@@ -41,8 +41,8 @@ export default async function LinksAjudaPage() {
             const Conteudo = (
               <>
                 <div className="flex items-start gap-2.5">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink">
-                    <Link2 size={14} className="text-amber" strokeWidth={2.5} />
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber">
+                    <Link2 size={14} className="text-ink" strokeWidth={2.5} />
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
@@ -52,7 +52,7 @@ export default async function LinksAjudaPage() {
                       </span>
                     </div>
                     {item.url && (
-                      <p className="mt-0.5 truncate text-xs text-amber">{item.url}</p>
+                      <p className="mt-0.5 truncate text-xs text-ink">{item.url}</p>
                     )}
                   </div>
                 </div>
