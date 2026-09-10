@@ -352,8 +352,8 @@ function SecaoLinks({ itens: itensIniciais }) {
   async function adicionarLista() {
     setErroLista("");
     const entradas = lista
-      .split(";")
-      .map((item) => item.trim())
+      .split(/;|\s+\.\s+/)
+      .map((item) => item.trim().replace(/\.$/, "").trim())
       .filter(Boolean)
       .map((item) => {
         const virgula = item.indexOf(",");
