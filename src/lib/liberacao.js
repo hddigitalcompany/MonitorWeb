@@ -127,6 +127,62 @@ function minutosAtivosNoIntervalo(inicio, fim, inicioHora, fimHora) {
   return total;
 }
 
+// Acha o instante real (Date) em que se alcançam `minutosNecessarios`
+// de tempo "ativo" (dentro da janela) contados a partir do primeiro
+// login — é o inverso de minutosAtivosNoIntervalo, usado pra saber
+// exatamente que horas um item específico foi liberado.
+function dataAposMinutosAtivos(primeiroLogin, minutosNecessarios, inicioHora, fimHora) {
+  const inicioMinLocal = minutosLocalBR(primeiroLogin);
+  if (minutosNecessarios <= 0) return new Date(primeiroLogin);
+
+  let acumulado = 0;
+  let cursor = Math.floor(inicioMinLocal / MIN_DIA) * MIN_DIA;
+
+  for (let i = 0; i < 100000; i++) {
+    const janelaInicio = cursor + inicioHora * 60;
+    const janelaFim = cursor + fimHora * 60;
+    const overlapInicio = Math.max(inicioMinLocal, janelaInicio);
+    const overlapFim = janelaFim;
+    if (overlapFim > overlapInicio) {
+      const disponivelHoje = overlapFim - overlapInicio;
+      if (acumulado + disponivelHoje >= minutosNecessarios) {
+        const minutoLocalAlvo = overlapInicio + (minutosNecessarios - acumulado);
+        return new Date(minutoLocalAlvo * 60000 + OFFSET_BR_MS);
+      }
+      acumulado += disponivelHoje;
+    }
+    cursor += MIN_DIA;
+  }
+  return new Date(primeiroLogin);
+}
+
+// A que horas (Date) o item na posição `indice` (0 = o mais antigo)
+// foi liberado pra esse usuário. Os primeiros `inicial` itens contam
+// como liberados assim que ela loga a primeira vez; os seguintes
+// seguem o mesmo ritmo (e a mesma janela de horário, se a categoria
+// tiver uma) usado em quantidadeLiberada.
+export function dataDeLiberacao(categoria, primeiroLogin, indice) {
+  const config = CATEGORIAS[categoria];
+  if (!config) return new Date(primeiroLogin);
+  if (indice < config.inicial) return new Date(primeiroLogin);
+
+  const passoNecessario = Math.ceil((indice - config.inicial + 1) / config.porPasso);
+  let minutosNecessarios = 0;
+  for (let k = 0; k < passoNecessario; k++) {
+    minutosNecessarios += intervaloDoPasso(categoria, primeiroLogin, k, config);
+  }
+
+  if (config.janelaAtiva) {
+    return dataAposMinutosAtivos(
+      primeiroLogin,
+      minutosNecessarios,
+      config.janelaAtiva.inicioHora,
+      config.janelaAtiva.fimHora
+    );
+  }
+  return new Date(new Date(primeiroLogin).getTime() + minutosNecessarios * 60000);
+}
+
 // Quantos itens dessa categoria já estão liberados, dado o momento do
 // primeiro login e o momento atual. `total` (opcional) limita o
 // resultado à quantidade de itens que realmente existem.
