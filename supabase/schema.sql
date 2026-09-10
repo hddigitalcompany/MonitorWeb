@@ -49,7 +49,9 @@ create table if not exists public.conteudo_locais (
 
 create table if not exists public.conteudo_lembretes (
   id uuid primary key default gen_random_uuid(),
-  texto text not null,
+  texto text,
+  hora text,
+  atividade text,
   criado_em timestamptz not null default now()
 );
 

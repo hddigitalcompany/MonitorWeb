@@ -43,9 +43,7 @@ export default function AdminDashboard({ dadosIniciais }) {
       {secao === "locais" && (
         <SecaoTexto tabela="conteudo_locais" itens={dadosIniciais.locais} placeholder="Sugestão de local seguro" />
       )}
-      {secao === "lembretes" && (
-        <SecaoTexto tabela="conteudo_lembretes" itens={dadosIniciais.lembretes} placeholder="Texto do lembrete" />
-      )}
+      {secao === "lembretes" && <SecaoLembretes itens={dadosIniciais.lembretes} />}
       {secao === "links" && <SecaoLinks itens={dadosIniciais.links} />}
       {secao === "wifi" && <SecaoWifi itens={dadosIniciais.wifiDicas} />}
       {secao === "contatos" && <SecaoContatos itens={dadosIniciais.contatos} />}
@@ -203,6 +201,67 @@ function SecaoFotos({ itens: itensIniciais }) {
             <button onClick={() => excluir(f)} className="absolute right-1.5 top-1.5 rounded-sm bg-base/70 p-1 opacity-0 group-hover:opacity-100">
               <Trash2 size={12} className="text-ink" />
             </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SecaoLembretes({ itens: itensIniciais }) {
+  const [itens, setItens] = useState(itensIniciais);
+  const [hora, setHora] = useState("");
+  const [atividade, setAtividade] = useState("");
+  const supabase = createClient();
+
+  function ordenar(a, b) {
+    if (!a.hora && !b.hora) return 0;
+    if (!a.hora) return 1;
+    if (!b.hora) return -1;
+    return a.hora.localeCompare(b.hora);
+  }
+
+  async function adicionar() {
+    if (!atividade.trim()) return;
+    const { data: novo } = await supabase
+      .from("conteudo_lembretes")
+      .insert({ hora: hora || null, atividade: atividade.trim(), texto: atividade.trim() })
+      .select()
+      .single();
+    if (novo) setItens([...itens, novo].sort(ordenar));
+    setHora("");
+    setAtividade("");
+  }
+
+  async function excluir(id) {
+    await supabase.from("conteudo_lembretes").delete().eq("id", id);
+    setItens(itens.filter((i) => i.id !== id));
+  }
+
+  return (
+    <div>
+      <div className="card mb-6">
+        <p className="field-label">Hora</p>
+        <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} className="field-input mb-3" />
+        <p className="field-label">Atividade</p>
+        <input
+          value={atividade}
+          onChange={(e) => setAtividade(e.target.value)}
+          placeholder="Ex: Tomar remédio"
+          className="field-input mb-3"
+        />
+        <button onClick={adicionar} className="btn-primary w-full">Publicar</button>
+      </div>
+      <div className="flex flex-col gap-2">
+        {[...itens].sort(ordenar).map((i) => (
+          <div key={i.id} className="flex items-center justify-between gap-2 rounded-sm border border-border bg-surface p-3">
+            <div className="flex items-center gap-3">
+              {i.hora && (
+                <span className="shrink-0 rounded-sm bg-amber/20 px-2 py-1 text-xs font-medium text-ink">{i.hora}</span>
+              )}
+              <p className="text-sm text-ink">{i.atividade || i.texto}</p>
+            </div>
+            <button onClick={() => excluir(i.id)} className="shrink-0 text-muted hover:text-rust"><Trash2 size={14} /></button>
           </div>
         ))}
       </div>
