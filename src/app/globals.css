@@ -35,9 +35,19 @@
     @apply mb-1.5 block text-sm text-muted;
   }
 
+  /* text-base (16px) em vez de text-sm: abaixo de 16px o Safari do
+     iPhone dá zoom sozinho ao focar o campo — isso evita esse zoom. */
   .field-input {
-    @apply w-full rounded-sm border border-border bg-surface2 px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:border-amber;
+    @apply w-full rounded-sm border border-border bg-surface2 px-3 py-2 text-base text-ink placeholder:text-muted/60 focus:border-amber;
   }
+}
+
+/* Rede de segurança: qualquer input/select/textarea que não use
+   .field-input também fica com no mínimo 16px, pelo mesmo motivo. */
+input,
+select,
+textarea {
+  font-size: max(16px, 1em);
 }
 
 @media (prefers-reduced-motion: reduce) {
