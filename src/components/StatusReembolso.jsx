@@ -44,7 +44,7 @@ export default function StatusReembolso({ pedido, nomeUsuario }) {
 
         {concluido && (
           <div className="flex flex-col items-start">
-            <div className="max-w-[85%] rounded-sm border border-olive bg-olive/10 px-3 py-2 text-sm leading-relaxed text-ink">
+            <div className="max-w-[85%] rounded-sm border border-border bg-surface px-3 py-2 text-sm font-semibold leading-relaxed text-ink">
               {`Parabéns ${nomeUsuario}! seu pedido de reembolso foi efetuado com sucesso! O valor deve retornar a sua fatura dentro do prazo de processamento do seu Banco, por aqui, terminamos, caso reste alguma dúvida, não exite em nos contatar!`}
             </div>
             <span className="mt-1 px-1 text-[10px] text-muted">{formatarHora(comHoras(pedido.criado_em, 96))}</span>

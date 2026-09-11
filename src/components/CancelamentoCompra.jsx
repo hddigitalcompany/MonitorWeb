@@ -21,12 +21,8 @@ function Bolha({ de, texto, destaque = false, hora }) {
     <div className={`flex flex-col ${propria ? "items-end" : "items-start"}`}>
       <div
         className={`max-w-[85%] rounded-sm px-3 py-2 text-sm leading-relaxed ${
-          propria
-            ? "bg-amber text-ink"
-            : destaque
-            ? "border border-olive bg-olive/10 text-ink"
-            : "border border-border bg-surface text-ink"
-        }`}
+          propria ? "bg-amber text-ink" : "border border-border bg-surface text-ink"
+        } ${destaque ? "font-semibold" : ""}`}
       >
         {texto}
         {!propria && texto === "" && <span className="opacity-0">.</span>}
@@ -92,7 +88,7 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
     for (let i = 0; i < textoCompleto.length; i++) {
       atual += textoCompleto[i];
       setEmDigitacao({ texto: atual, destaque });
-      await sleep(entre(22, 42));
+      await sleep(entre(35, 55));
 
       if (i === pontoHesitacao) {
         const rabisco = FILLERS_HESITACAO[Math.floor(Math.random() * FILLERS_HESITACAO.length)];
@@ -115,19 +111,19 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
     setEmDigitacao(null);
   }
 
-  async function falarBot(texto, { destaque = false } = {}) {
+  async function falarBot(texto, { destaque = false, pensar = [18000, 40000] } = {}) {
     setDigitando(true);
-    await sleep(entre(700, 1400));
+    await sleep(entre(pensar[0], pensar[1]));
     setDigitando(false);
     await digitarTexto(texto, destaque);
-    await sleep(entre(500, 1100));
+    await sleep(entre(1500, 3000));
   }
 
   // Pausa "buscando informação" — sem nova mensagem, só o indicador
   // ativo por mais tempo, pra dar a sensação de análise de verdade.
   async function pausaBuscando() {
     setDigitando(true);
-    await sleep(entre(3200, 5000));
+    await sleep(entre(25000, 45000));
     setDigitando(false);
   }
 
@@ -182,7 +178,7 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
     falarUsuario(textoBolha);
     setComposerValor("");
     setEtapa("processando");
-    await falarBot("Verificando sua compra...");
+    await falarBot("Verificando sua compra...", { pensar: [2500, 5000] });
     await pausaBuscando();
     await falarBot(
       "Verifiquei e ressaltamos que sua compra está dentro do prazo e elegível para reembolso, conforme você me pediu eu vou dar prosseguimento no seu pedido e farei o cancelamento...",
@@ -200,7 +196,7 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
     setComposerValor("");
     setErro("");
     setEtapa("processando");
-    await falarBot("Enviando pedido...");
+    await falarBot("Enviando pedido...", { pensar: [2500, 5000] });
 
     const { data: novo, error } = await supabase
       .from("pedidos_reembolso")
