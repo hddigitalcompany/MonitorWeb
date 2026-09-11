@@ -29,6 +29,16 @@ function BolhaDigitando() {
   );
 }
 
+function converterHistorico(historico) {
+  return (historico || []).map((m, i) => ({
+    id: `h${i}`,
+    de: m.de,
+    texto: m.texto,
+    destaque: !!m.destaque,
+    hora: m.hora ? new Date(m.hora) : null,
+  }));
+}
+
 const ETAPAS_SEM_COMPOSER = ["encerrado", "concluido"];
 
 const PLACEHOLDERS_COMPOSER = {
@@ -40,8 +50,15 @@ const PLACEHOLDERS_COMPOSER = {
   aguardando_confirmacao_final: "Escreva algo pra confirmar",
 };
 
-export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, onFechar }) {
-  const [mensagens, setMensagens] = useState([]);
+export default function CancelamentoCompra({
+  userId,
+  nomeUsuario,
+  onConcluido,
+  onFechar,
+  onAbandonado,
+  historicoAnterior = [],
+}) {
+  const [mensagens, setMensagens] = useState(() => converterHistorico(historicoAnterior));
   const [digitando, setDigitando] = useState(false);
   const [emDigitacao, setEmDigitacao] = useState(null); // { texto, destaque } enquanto a mensagem está sendo "escrita"
   const [etapa, setEtapa] = useState("inicio");
@@ -53,7 +70,7 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
   // Guarda a conversa completa numa referência (não só no estado) pra
   // conseguir salvar o histórico final sem depender de um "mensagens"
   // desatualizado dentro de funções assíncronas.
-  const mensagensRef = useRef([]);
+  const mensagensRef = useRef(converterHistorico(historicoAnterior));
   const supabase = createClient();
 
   useEffect(() => {
@@ -137,6 +154,9 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
 
   useEffect(() => {
     (async () => {
+      if (historicoAnterior && historicoAnterior.length > 0) {
+        await falarSistema("Começando um novo pedido...");
+      }
       await falarBot(
         "Ao continuar, sua compra será cancelada e o acesso ao aplicativo será encerrado. O valor pago entra em análise: se a sua compra estiver dentro de 7 dias, você recebe o valor integral de volta."
       );
@@ -175,6 +195,9 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
     await sleep(entre(12000, 22000));
     setDigitando(false);
     await falarSistema("Julia entrou na conversa");
+    await falarSistema(
+      "Se mantenha na conversa ou o reembolso será encerrado e você terá que abrir um novo pedido"
+    );
 
     await falarBot(
       `Olá, ${nomeUsuario} tudo bem? Me chamo Julia, e faço parte do atendimento e central de contas, recebemos sua insatisfação e seu desejo de cancelar a conta.`
@@ -256,6 +279,39 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
     setTimeout(() => onConcluido(atualizado || { ...novo, conversa: conversaFinal }), 900);
   }
 
+  // Se a pessoa sai (botão Voltar) antes de terminar o pedido, essa
+  // tentativa é encerrada como "abandonada" — a conversa até aqui é salva,
+  // com uma tag avisando que foi encerrada, pra reaparecer da próxima vez
+  // que ela tentar de novo.
+  async function sairDoChat() {
+    const emAndamento = etapa !== "concluido" && etapa !== "encerrado";
+    if (emAndamento) {
+      const tagEncerramento = {
+        id: proximoId(),
+        de: "sistema",
+        texto: "Você abandonou a conversa e o pedido foi encerrado",
+        hora: new Date(),
+      };
+      const conversaFinal = [...mensagensRef.current, tagEncerramento].map((m) => ({
+        de: m.de,
+        texto: m.texto,
+        destaque: !!m.destaque,
+        hora: m.hora ? new Date(m.hora).toISOString() : new Date().toISOString(),
+      }));
+      try {
+        const { data } = await supabase
+          .from("pedidos_reembolso")
+          .insert({ user_id: userId, status: "abandonado", conversa: conversaFinal })
+          .select()
+          .single();
+        if (data) onAbandonado?.(data);
+      } catch (e) {
+        // melhor esforço — se não der pra salvar, sai da tela mesmo assim
+      }
+    }
+    onFechar();
+  }
+
   function enviarComposer() {
     const texto = composerValor.trim();
     if (!texto || bloqueado()) return;
@@ -296,7 +352,7 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
 
   return (
     <div>
-      <button onClick={onFechar} className="mb-4 flex items-center gap-1.5 text-sm text-muted">
+      <button onClick={sairDoChat} className="mb-4 flex items-center gap-1.5 text-sm text-muted">
         <ArrowLeft size={15} /> Voltar
       </button>
 

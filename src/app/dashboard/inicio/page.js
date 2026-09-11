@@ -24,7 +24,7 @@ export default async function InicioPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { primeiroLogin, ultimoAcessoAnterior } = await registrarAcesso(supabase, user.id);
+  const { primeiroLogin, ultimoAcessoAnterior, ultimoVisto } = await registrarAcesso(supabase, user.id);
 
   const [videos, ...conteudos] = await Promise.all([
     supabase.from("conteudo_video_dia").select("*").order("criado_em", { ascending: false }).limit(1),
@@ -42,7 +42,12 @@ export default async function InicioPage() {
   CATEGORIAS_CONTEUDO.forEach((c, i) => {
     const total = conteudos[i].data?.length || 0;
     const liberadoAgora = quantidadeLiberada(c.categoria, primeiroLogin, agora, total);
-    const liberadoAntes = quantidadeLiberada(c.categoria, primeiroLogin, ultimoAcessoAnterior, total);
+    // "Novos" é comparado com a última vez que a pessoa ABRIU aquela aba
+    // específica — não com a última vez que ela abriu a Início — senão só
+    // de ver esse card aqui a contagem já sumia sem ela ter visto o
+    // conteúdo de verdade.
+    const desdeQuando = ultimoVisto[c.categoria] ? new Date(ultimoVisto[c.categoria]) : new Date(primeiroLogin);
+    const liberadoAntes = quantidadeLiberada(c.categoria, primeiroLogin, desdeQuando, total);
     const novos = Math.max(0, liberadoAgora - liberadoAntes);
     novosPorHref[c.href] = novos;
     totalNovos += novos;

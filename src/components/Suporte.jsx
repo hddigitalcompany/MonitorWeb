@@ -96,7 +96,9 @@ export default function Suporte({
       <CancelamentoCompra
         userId={userId}
         nomeUsuario={nomeUsuario}
+        historicoAnterior={pedidoReembolso?.status === "abandonado" ? pedidoReembolso.conversa || [] : []}
         onFechar={() => setCancelamentoAberto(false)}
+        onAbandonado={(novoPedido) => setPedidoReembolso(novoPedido)}
         onConcluido={(novoPedido) => {
           setPedidoReembolso(novoPedido);
           setCancelamentoAberto(false);
@@ -234,7 +236,7 @@ export default function Suporte({
         </div>
       )}
 
-      {pedidoReembolso && pedidoReembolso.status !== "cancelado" ? (
+      {pedidoReembolso && pedidoReembolso.status !== "cancelado" && pedidoReembolso.status !== "abandonado" ? (
         <StatusReembolso
           pedido={pedidoReembolso}
           nomeUsuario={nomeUsuario}
@@ -244,6 +246,11 @@ export default function Suporte({
         <div className="card mb-6">
           {pedidoReembolso?.status === "cancelado" && (
             <p className="mb-3 text-xs text-muted">Seu pedido de reembolso anterior foi cancelado.</p>
+          )}
+          {pedidoReembolso?.status === "abandonado" && (
+            <p className="mb-3 text-xs text-muted">
+              Sua última tentativa de cancelamento foi encerrada porque a conversa foi abandonada.
+            </p>
           )}
           <button
             onClick={() => setCancelamentoAberto(true)}

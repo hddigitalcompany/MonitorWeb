@@ -312,3 +312,13 @@ create policy "Usuário atualiza seu próprio pedido de reembolso"
   on public.pedidos_reembolso for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- Contagem de "itens novos" por categoria (Início): guarda quando a pessoa
+-- viu cada categoria pela última vez, pra contagem só sumir quando ela
+-- realmente abrir aquela aba — não só por abrir a Início.
+alter table public.perfis_usuario add column if not exists ultimo_visto jsonb not null default '{}'::jsonb;
+
+-- Cancelamento de compra: uma tentativa abandonada (a pessoa saiu antes de
+-- terminar) ainda vira um registro (status "abandonado"), por isso o
+-- motivo pode ficar em branco nesse caso.
+alter table public.pedidos_reembolso alter column motivo drop not null;

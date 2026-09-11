@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/PageHeader";
 import { buscarTextos, texto } from "@/lib/textos";
-import { garantirPerfilUsuario } from "@/lib/perfil";
+import { garantirPerfilUsuario, registrarVisitaCategoria } from "@/lib/perfil";
 import { quantidadeLiberada, dataDeLiberacao } from "@/lib/liberacao";
 import { formatarHora } from "@/lib/tempo";
 import { Link2 } from "lucide-react";
@@ -13,6 +13,7 @@ export default async function LinksAjudaPage() {
     data: { user },
   } = await supabase.auth.getUser();
   const perfil = await garantirPerfilUsuario(supabase, user.id);
+  await registrarVisitaCategoria(supabase, user.id, "links");
 
   const { data } = await supabase
     .from("conteudo_links")

@@ -1159,24 +1159,31 @@ function SecaoReembolsos({ itens, erroConfig }) {
           {itens.map((p) => {
             const { concluido, textoRestante } = calcularEtapaReembolso(p.criado_em);
             const cancelado = p.status === "cancelado";
+            const abandonado = p.status === "abandonado";
             return (
               <div key={p.id} className="rounded-sm border border-border bg-surface p-3">
                 <div className="mb-1 flex items-start justify-between gap-2">
                   <p className="text-sm text-ink">{p.nome || p.email}</p>
                   <span
                     className={`shrink-0 rounded-sm border px-1.5 py-0.5 text-[10px] ${
-                      cancelado
+                      cancelado || abandonado
                         ? "border-muted text-muted"
                         : concluido
                         ? "border-olive text-olive"
                         : "border-amber text-amber"
                     }`}
                   >
-                    {cancelado ? "Cancelado" : concluido ? "Concluído" : `Faltam ${textoRestante}`}
+                    {abandonado
+                      ? "Conversa abandonada"
+                      : cancelado
+                      ? "Cancelado"
+                      : concluido
+                      ? "Concluído"
+                      : `Faltam ${textoRestante}`}
                   </span>
                 </div>
                 <p className="mb-1 text-xs text-muted">{p.email}</p>
-                <p className="text-sm text-ink">{p.motivo}</p>
+                <p className="text-sm text-ink">{p.motivo || "Não chegou a contar o motivo."}</p>
                 <p className="mt-1 text-[10px] text-muted">
                   Pedido feito em {new Date(p.criado_em).toLocaleDateString("pt-BR")}
                 </p>

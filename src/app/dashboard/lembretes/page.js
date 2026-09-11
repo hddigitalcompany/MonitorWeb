@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/PageHeader";
 import { buscarTextos, texto } from "@/lib/textos";
-import { garantirPerfilUsuario } from "@/lib/perfil";
+import { garantirPerfilUsuario, registrarVisitaCategoria } from "@/lib/perfil";
 import { quantidadeLiberada } from "@/lib/liberacao";
 
 export default async function LembretesPage() {
@@ -11,6 +11,7 @@ export default async function LembretesPage() {
     data: { user },
   } = await supabase.auth.getUser();
   const perfil = await garantirPerfilUsuario(supabase, user.id);
+  await registrarVisitaCategoria(supabase, user.id, "lembretes");
 
   const { data } = await supabase
     .from("conteudo_lembretes")

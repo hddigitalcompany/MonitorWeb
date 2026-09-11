@@ -43,11 +43,16 @@ export async function garantirPerfilUsuario(supabase, userId) {
   );
 }
 
-// Chamado só na tela Início: lê o último acesso ANTERIOR (pra comparar
-// quanto conteúdo foi liberado desde então) e já atualiza pra agora.
+// Chamado só na tela Início: lê o último acesso ANTERIOR (só pra mostrar
+// "há quanto tempo você não abria o app") e já atualiza pra agora. Isso NÃO
+// mexe na contagem de "itens novos" — essa contagem usa o último acesso de
+// cada categoria (veja registrarVisitaCategoria), não esse aqui, senão só
+// de abrir a Início a contagem já zerava sem a pessoa ter visto o
+// conteúdo novo de verdade.
 export async function registrarAcesso(supabase, userId) {
   const perfil = await garantirPerfilUsuario(supabase, userId);
   const ultimoAcessoAnterior = perfil.ultimo_acesso;
+  const ultimoVisto = perfil.ultimo_visto || {};
 
   const { error } = await supabase
     .from("perfis_usuario")
@@ -58,5 +63,24 @@ export async function registrarAcesso(supabase, userId) {
     console.error("[perfil] erro ao atualizar último acesso:", error.message);
   }
 
-  return { primeiroLogin: perfil.primeiro_login, ultimoAcessoAnterior };
+  return { primeiroLogin: perfil.primeiro_login, ultimoAcessoAnterior, ultimoVisto };
+}
+
+// Chamado na abertura de cada aba de conteúdo (fotos, locais, lembretes,
+// links, wifi, contatos): marca que a pessoa viu aquela categoria agora.
+// É esse registro — por categoria, não um "último acesso" geral — que
+// zera a contagem de "itens novos" dela na tela Início.
+export async function registrarVisitaCategoria(supabase, userId, categoria) {
+  const perfil = await garantirPerfilUsuario(supabase, userId);
+  const vistoAtual = perfil.ultimo_visto || {};
+  const novoVisto = { ...vistoAtual, [categoria]: new Date().toISOString() };
+
+  const { error } = await supabase
+    .from("perfis_usuario")
+    .update({ ultimo_visto: novoVisto })
+    .eq("user_id", userId);
+
+  if (error) {
+    console.error("[perfil] erro ao registrar visita da categoria", categoria, ":", error.message);
+  }
 }
