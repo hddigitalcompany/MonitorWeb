@@ -1,8 +1,14 @@
 const TOTAL_HORAS = 96; // 4 dias
 
 export function formatarDuracao(horas) {
-  const dias = Math.floor(horas / 24);
-  const horasRestantes = Math.round(horas % 24);
+  let dias = Math.floor(horas / 24);
+  let horasRestantes = Math.round(horas % 24);
+  // O arredondamento acima podia "estourar" pra 24h (ex: 23h36 virava 24h em
+  // vez de virar 1 dia), mostrando algo tipo "3 dias e 24h" — corrige aqui.
+  if (horasRestantes === 24) {
+    dias += 1;
+    horasRestantes = 0;
+  }
   if (dias > 0 && horasRestantes > 0) return `${dias} dia${dias > 1 ? "s" : ""} e ${horasRestantes}h`;
   if (dias > 0) return `${dias} dia${dias > 1 ? "s" : ""}`;
   if (horasRestantes > 0) return `${horasRestantes}h`;

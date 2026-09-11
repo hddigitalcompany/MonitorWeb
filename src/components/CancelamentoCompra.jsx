@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ArrowLeft, Send } from "lucide-react";
 import ChatBolha from "@/components/ChatBolha";
+import TagSistema from "@/components/TagSistema";
 import { classificarResposta } from "@/lib/intencao";
 
 const FILLERS_HESITACAO = ["entao", "bem", "assim", "tipo", "olha", "so um instante"];
@@ -108,6 +109,16 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
     setEmDigitacao(null);
   }
 
+  // Mensagem de sistema (tag centralizada, tipo "fulano entrou na
+  // conversa") — aparece sozinha, sem efeito de digitação.
+  async function falarSistema(texto) {
+    await sleep(entre(1200, 2200));
+    const nova = { id: proximoId(), de: "sistema", texto, hora: new Date() };
+    mensagensRef.current.push(nova);
+    setMensagens((prev) => [...prev, nova]);
+    await sleep(entre(800, 1500));
+  }
+
   async function falarBot(texto, { destaque = false, pensar = [18000, 40000] } = {}) {
     setDigitando(true);
     await sleep(entre(pensar[0], pensar[1]));
@@ -159,6 +170,12 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
     setComposerValor("");
     setEtapa("processando");
 
+    await falarSistema("Estamos transferindo você pra um dos nossos atendentes, aguarde um instante...");
+    setDigitando(true);
+    await sleep(entre(12000, 22000));
+    setDigitando(false);
+    await falarSistema("Julia entrou na conversa");
+
     await falarBot(
       `Olá, ${nomeUsuario} tudo bem? Me chamo Julia, e faço parte do atendimento e central de contas, recebemos sua insatisfação e seu desejo de cancelar a conta.`
     );
@@ -180,12 +197,10 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
     await falarBot("Verificando sua compra...", { pensar: [2500, 5000] });
     await pausaBuscando();
     await falarBot(
-      "Verifiquei e ressaltamos que sua compra está dentro do prazo e elegível para reembolso, conforme você me pediu eu vou dar prosseguimento no seu pedido e farei o cancelamento...",
-      { destaque: true }
+      "Verifiquei e ressaltamos que sua compra está dentro do prazo e elegível para reembolso, conforme você me pediu eu vou dar prosseguimento no seu pedido e farei o cancelamento..."
     );
     await falarBot(
-      `O pedido vai para análise ${nomeUsuario}, tudo bem? Essa análise leva no máximo 4 dias, e após isso você poderá acompanhar por aqui o pedido de reembolso.`,
-      { destaque: true }
+      `O pedido vai para análise ${nomeUsuario}, tudo bem? Essa análise leva no máximo 4 dias, e após isso você poderá acompanhar por aqui o pedido de reembolso.`
     );
     setEtapa("aguardando_confirmacao_final");
   }
@@ -286,14 +301,19 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
       </button>
 
       <div className="mb-4 flex flex-col gap-2.5">
-        {mensagens.map((m) => (
-          <ChatBolha key={m.id} de={m.de} texto={m.texto} destaque={m.destaque} hora={m.hora} />
-        ))}
+        {mensagens.map((m) =>
+          m.de === "sistema" ? (
+            <TagSistema key={m.id} texto={m.texto} />
+          ) : (
+            <ChatBolha key={m.id} de={m.de} texto={m.texto} destaque={m.destaque} hora={m.hora} />
+          )
+        )}
         {emDigitacao && <ChatBolha de="bot" texto={emDigitacao.texto} destaque={emDigitacao.destaque} />}
         {digitando && !emDigitacao && <BolhaDigitando />}
         <div ref={fimRef} />
       </div>
 
+      <div className="sticky bottom-0 -mx-4 border-t border-border bg-base px-4 pt-3">
       {etapa === "aguardando_confirmacao" && (
         <div className="mb-2 flex gap-2">
           <button
@@ -365,6 +385,8 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
           </button>
         </div>
       )}
+      <div className="h-2" />
+      </div>
     </div>
   );
 }

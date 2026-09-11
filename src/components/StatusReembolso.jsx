@@ -27,7 +27,7 @@ export default function StatusReembolso({ pedido, nomeUsuario, onCancelado }) {
 
   const mensagemAtual = concluido
     ? `Parabéns ${nomeUsuario}! Seu pedido de reembolso foi efetuado com sucesso! O valor deve retornar a sua fatura dentro do prazo de processamento do seu banco. Por aqui, terminamos — caso reste alguma dúvida, não hesite em nos contatar!`
-    : `Seu pedido de reembolso está em análise. Essa análise leva no máximo 4 dias, e você pode acompanhar por aqui o tempo que falta. Faltam ${textoRestante}.`;
+    : `Seu pedido de reembolso está em análise. Essa análise leva no máximo 4 dias, e você pode acompanhar por aqui o tempo que falta.`;
 
   async function cancelarPedido() {
     if (cancelando) return;
@@ -55,6 +55,9 @@ export default function StatusReembolso({ pedido, nomeUsuario, onCancelado }) {
       </div>
 
       <div className="mb-4 rounded-sm border border-border bg-surface2 p-3">
+        {!concluido && (
+          <p className="mb-2 text-base font-extrabold tracking-tight text-ink">Faltam {textoRestante}</p>
+        )}
         <p className={`text-sm font-semibold leading-relaxed text-ink ${detalheAberto ? "" : "line-clamp-2"}`}>
           {mensagemAtual}
         </p>
