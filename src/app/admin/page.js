@@ -3,9 +3,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 
-async function buscarClientesEUsuarios(supabase) {
-  const { data: listaAdmins } = await supabase.from("admins").select("user_id");
-  const idsAdmins = new Set((listaAdmins || []).map((a) => a.user_id));
+async function buscarClientesEUsuarios(supabase, idsAdminsArray) {
+  const idsAdmins = new Set(idsAdminsArray || []);
 
   try {
     const supabaseAdmin = createAdminClient();
@@ -28,6 +27,7 @@ async function buscarClientesEUsuarios(supabase) {
         nome: u.user_metadata?.full_name || u.user_metadata?.name || "",
         avatarUrl: u.user_metadata?.avatar_url || null,
         criadoEm: new Date(u.created_at).toLocaleDateString("pt-BR"),
+        criadoEmIso: u.created_at,
       }))
       .sort((a, b) => (a.nome || a.email).localeCompare(b.nome || b.email));
 
@@ -35,6 +35,28 @@ async function buscarClientesEUsuarios(supabase) {
   } catch (err) {
     console.error('[admin/clientes] erro ao buscar clientes:', err?.message || err);
     return { clientes: [], mapaUsuarios: new Map(), erroConfig: true };
+  }
+}
+
+async function buscarEventosVisita(supabase, idsAdmins, desde) {
+  try {
+    let consulta = supabase
+      .from("eventos_visita")
+      .select("user_id, rota, criado_em")
+      .gte("criado_em", desde)
+      .order("criado_em", { ascending: true })
+      .limit(20000);
+
+    if (idsAdmins.length > 0) {
+      consulta = consulta.not("user_id", "in", `(${idsAdmins.join(",")})`);
+    }
+
+    const { data, error } = await consulta;
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error("[admin/painel] erro ao buscar eventos de visita:", err?.message || err);
+    return [];
   }
 }
 
@@ -65,6 +87,10 @@ export default async function AdminPage() {
     );
   }
 
+  const { data: listaAdmins } = await supabase.from("admins").select("user_id");
+  const idsAdmins = (listaAdmins || []).map((a) => a.user_id);
+  const desde32Dias = new Date(Date.now() - 32 * 24 * 60 * 60 * 1000).toISOString();
+
   const [
     fotos,
     videos,
@@ -78,6 +104,7 @@ export default async function AdminPage() {
     chamados,
     pedidosReembolso,
     { clientes, mapaUsuarios, erroConfig },
+    eventosVisita,
   ] = await Promise.all([
     supabase.from("conteudo_fotos").select("*").order("criado_em", { ascending: false }),
     supabase.from("conteudo_video_dia").select("*").order("criado_em", { ascending: false }),
@@ -93,7 +120,8 @@ export default async function AdminPage() {
       .select("*, mensagens_suporte(*)")
       .order("criado_em", { ascending: false }),
     supabase.from("pedidos_reembolso").select("*").order("criado_em", { ascending: false }),
-    buscarClientesEUsuarios(supabase),
+    buscarClientesEUsuarios(supabase, idsAdmins),
+    buscarEventosVisita(supabase, idsAdmins, desde32Dias),
   ]);
 
   const reembolsos = (pedidosReembolso.data || []).map((p) => {
@@ -121,6 +149,8 @@ export default async function AdminPage() {
         clientes,
         erroClientes: erroConfig,
         reembolsos,
+        eventosVisita,
+        idsAdmins,
       }}
     />
   );

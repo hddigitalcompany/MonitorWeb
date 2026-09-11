@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -38,7 +38,22 @@ export function DashboardChrome({ user, telefone, children }) {
   const [menuAberto, setMenuAberto] = useState(false);
   const [perfilAberto, setPerfilAberto] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
   const supabase = createClient();
+
+  // Registra cada aba que a pessoa abre — é esse histórico que alimenta o
+  // Painel ao vivo lá na administração (abas mais visitadas, horário de
+  // pico, quem está usando agora etc). Melhor esforço: se falhar, não
+  // atrapalha a navegação da pessoa.
+  useEffect(() => {
+    supabase
+      .from("eventos_visita")
+      .insert({ user_id: user.id, rota: pathname })
+      .then(({ error }) => {
+        if (error) console.error("[eventos_visita] erro ao registrar visita:", error.message);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   async function sair() {
     await supabase.auth.signOut();

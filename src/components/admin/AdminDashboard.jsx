@@ -8,6 +8,7 @@ import { TEXTOS_PADRAO } from "@/lib/textos";
 import { calcularEtapaReembolso } from "@/lib/reembolso";
 import { formatarHora } from "@/lib/tempo";
 import { ABAS } from "@/components/DashboardChrome";
+import PainelAoVivo from "@/components/admin/PainelAoVivo";
 
 const ROTAS_PREVIEW = [
   { href: "/", label: "Login / criar conta" },
@@ -16,6 +17,7 @@ const ROTAS_PREVIEW = [
 ];
 
 const SECOES = [
+  { id: "painel", label: "Painel ao vivo" },
   { id: "video", label: "Vídeo do dia" },
   { id: "fotos", label: "Fotos" },
   { id: "locais", label: "Locais seguros" },
@@ -31,7 +33,7 @@ const SECOES = [
 ];
 
 export default function AdminDashboard({ dadosIniciais }) {
-  const [secao, setSecao] = useState("video");
+  const [secao, setSecao] = useState("painel");
   const [previewRota, setPreviewRota] = useState("/dashboard/inicio");
   const [previewKey, setPreviewKey] = useState(0);
 
@@ -55,6 +57,14 @@ export default function AdminDashboard({ dadosIniciais }) {
           ))}
         </div>
 
+        {secao === "painel" && (
+          <PainelAoVivo
+            eventosIniciais={dadosIniciais.eventosVisita}
+            clientes={dadosIniciais.clientes}
+            idsAdmins={dadosIniciais.idsAdmins}
+            erroContas={dadosIniciais.erroClientes}
+          />
+        )}
         {secao === "video" && <SecaoVideo itens={dadosIniciais.videos} />}
         {secao === "fotos" && <SecaoFotos itens={dadosIniciais.fotos} />}
         {secao === "locais" && (

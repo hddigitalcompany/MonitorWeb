@@ -322,3 +322,31 @@ alter table public.perfis_usuario add column if not exists ultimo_visto jsonb no
 -- terminar) ainda vira um registro (status "abandonado"), por isso o
 -- motivo pode ficar em branco nesse caso.
 alter table public.pedidos_reembolso alter column motivo drop not null;
+
+-- Painel ao vivo (admin): cada aba que uma pessoa abre vira um registro
+-- aqui, o que alimenta o painel de estatísticas em tempo real (quem está
+-- navegando agora, abas mais visitadas, horário de pico, etc).
+create table if not exists public.eventos_visita (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  rota text not null,
+  criado_em timestamptz not null default now()
+);
+
+create index if not exists eventos_visita_criado_em_idx on public.eventos_visita (criado_em desc);
+create index if not exists eventos_visita_user_id_idx on public.eventos_visita (user_id);
+
+alter table public.eventos_visita enable row level security;
+
+create policy "Usuário registra suas próprias visitas"
+  on public.eventos_visita for insert
+  with check (auth.uid() = user_id);
+
+create policy "Admin vê todas as visitas"
+  on public.eventos_visita for select
+  using (exists (select 1 from public.admins where user_id = auth.uid()));
+
+-- Liga o "ao vivo de verdade" do painel: sem isso as visitas e as contas
+-- novas só apareceriam depois de atualizar a página.
+alter publication supabase_realtime add table public.eventos_visita;
+alter publication supabase_realtime add table public.perfis_usuario;
