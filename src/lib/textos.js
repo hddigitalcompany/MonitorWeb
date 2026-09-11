@@ -22,6 +22,11 @@ export const TEXTOS_PADRAO = {
   conversas_titulo: "Conversas",
   conversas_subtitulo: "Importe, se você quiser, organizadas por pessoa.",
   assinatura_titulo: "Assinatura",
+  login_selo: "Diário digital",
+  login_titulo: "Painel Pessoal",
+  login_subtitulo: "Fotos, localização, ligações e pesquisas — tudo num só lugar, só seu.",
+  login_erro: "Não deu pra entrar. Tenta de novo.",
+  login_rodape: "Sem senha. Só a sua conta Google.",
 };
 
 export async function buscarTextos(supabase) {

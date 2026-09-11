@@ -290,3 +290,14 @@ create policy "Admin vê todos os perfis"
 -- ============================================================
 
 alter table public.perfis_usuario add column if not exists telefone text;
+
+-- ============================================================
+-- TEXTOS PÚBLICOS NA TELA DE LOGIN
+-- A tela de login/criação de conta é vista por quem ainda não tem
+-- sessão, então os textos dela precisam poder ser lidos sem estar
+-- logado (a política "Leitura livre para logados" não cobre isso).
+-- ============================================================
+
+create policy "Leitura pública dos textos"
+  on public.conteudo_textos for select
+  using (true);

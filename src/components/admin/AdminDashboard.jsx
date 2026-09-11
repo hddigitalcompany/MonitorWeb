@@ -9,7 +9,11 @@ import { calcularEtapaReembolso } from "@/lib/reembolso";
 import { formatarHora } from "@/lib/tempo";
 import { ABAS } from "@/components/DashboardChrome";
 
-const ROTAS_PREVIEW = [{ href: "/dashboard/inicio", label: "Início" }, ...ABAS.filter((a) => a.href !== "/dashboard/inicio")];
+const ROTAS_PREVIEW = [
+  { href: "/", label: "Login / criar conta" },
+  { href: "/dashboard/inicio", label: "Início" },
+  ...ABAS.filter((a) => a.href !== "/dashboard/inicio"),
+];
 
 const SECOES = [
   { id: "video", label: "Vídeo do dia" },
@@ -798,6 +802,16 @@ const GRUPOS_TEXTOS = [
   { titulo: "Suporte", campos: [["suporte_titulo", "Título"], ["suporte_subtitulo", "Subtítulo"]] },
   { titulo: "Conversas", campos: [["conversas_titulo", "Título"], ["conversas_subtitulo", "Subtítulo"]] },
   { titulo: "Assinatura", campos: [["assinatura_titulo", "Título"]] },
+  {
+    titulo: "Login e criação de conta",
+    campos: [
+      ["login_selo", "Selo"],
+      ["login_titulo", "Título"],
+      ["login_subtitulo", "Subtítulo"],
+      ["login_erro", "Mensagem de erro"],
+      ["login_rodape", "Rodapé"],
+    ],
+  },
 ];
 
 function SecaoTextos({ itens }) {
