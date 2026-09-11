@@ -234,10 +234,17 @@ export default function Suporte({
         </div>
       )}
 
-      {pedidoReembolso ? (
-        <StatusReembolso pedido={pedidoReembolso} nomeUsuario={nomeUsuario} />
+      {pedidoReembolso && pedidoReembolso.status !== "cancelado" ? (
+        <StatusReembolso
+          pedido={pedidoReembolso}
+          nomeUsuario={nomeUsuario}
+          onCancelado={() => setPedidoReembolso({ ...pedidoReembolso, status: "cancelado" })}
+        />
       ) : (
         <div className="card mb-6">
+          {pedidoReembolso?.status === "cancelado" && (
+            <p className="mb-3 text-xs text-muted">Seu pedido de reembolso anterior foi cancelado.</p>
+          )}
           <button
             onClick={() => setCancelamentoAberto(true)}
             className="w-full rounded-sm border border-rust px-3 py-2 text-center text-sm text-rust"

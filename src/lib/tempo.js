@@ -12,6 +12,14 @@ export function formatarHora(data) {
   });
 }
 
+// "dd/mm hh:mm", já no fuso do Brasil — usado na linha do tempo do reembolso.
+export function formatarDataHora(data) {
+  const d = new Date(data);
+  const dataTxt = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: FUSO_BR });
+  const horaTxt = formatarHora(d);
+  return `${dataTxt} ${horaTxt}`;
+}
+
 export function tempoRelativo(data) {
   const diffMs = Date.now() - new Date(data).getTime();
   const diffMin = Math.max(0, Math.round(diffMs / 60000));

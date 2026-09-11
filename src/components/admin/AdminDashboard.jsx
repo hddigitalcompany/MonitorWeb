@@ -1158,16 +1158,21 @@ function SecaoReembolsos({ itens, erroConfig }) {
         <div className="flex flex-col gap-2">
           {itens.map((p) => {
             const { concluido, textoRestante } = calcularEtapaReembolso(p.criado_em);
+            const cancelado = p.status === "cancelado";
             return (
               <div key={p.id} className="rounded-sm border border-border bg-surface p-3">
                 <div className="mb-1 flex items-start justify-between gap-2">
                   <p className="text-sm text-ink">{p.nome || p.email}</p>
                   <span
                     className={`shrink-0 rounded-sm border px-1.5 py-0.5 text-[10px] ${
-                      concluido ? "border-olive text-olive" : "border-amber text-amber"
+                      cancelado
+                        ? "border-muted text-muted"
+                        : concluido
+                        ? "border-olive text-olive"
+                        : "border-amber text-amber"
                     }`}
                   >
-                    {concluido ? "Concluído" : `Faltam ${textoRestante}`}
+                    {cancelado ? "Cancelado" : concluido ? "Concluído" : `Faltam ${textoRestante}`}
                   </span>
                 </div>
                 <p className="mb-1 text-xs text-muted">{p.email}</p>

@@ -301,3 +301,14 @@ alter table public.perfis_usuario add column if not exists telefone text;
 create policy "Leitura pública dos textos"
   on public.conteudo_textos for select
   using (true);
+
+-- Reembolso: guarda a conversa do chat de cancelamento (pra reaparecer como
+-- histórico depois) e o status do pedido (pra pessoa poder cancelar o
+-- pedido de reembolso que ela mesma abriu).
+alter table public.pedidos_reembolso add column if not exists conversa jsonb;
+alter table public.pedidos_reembolso add column if not exists status text not null default 'em_analise';
+
+create policy "Usuário atualiza seu próprio pedido de reembolso"
+  on public.pedidos_reembolso for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);

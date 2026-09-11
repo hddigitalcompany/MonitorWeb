@@ -26,3 +26,19 @@ export function marcosDecorridos(horasDecorridas) {
   const marcos = [12, 24, 36, 48, 60, 72, 84, 96];
   return marcos.filter((m) => horasDecorridas >= m);
 }
+
+// Linha do tempo do reembolso, um marco por dia — usada na tela de status
+// pra mostrar o histórico de etapas (com data/hora de cada uma), em vez de
+// só o tempo que falta.
+export function checkpointsReembolso(criadoEm) {
+  const inicio = new Date(criadoEm).getTime();
+  const marcosHoras = [24, 48, 72, 96];
+  return marcosHoras.map((h) => {
+    const restante = Math.max(0, TOTAL_HORAS - h);
+    return {
+      horas: h,
+      data: new Date(inicio + h * 60 * 60 * 1000),
+      texto: h >= TOTAL_HORAS ? "Reembolso efetuado com sucesso" : `Tempo restante pro reembolso: ${formatarDuracao(restante)}`,
+    };
+  });
+}

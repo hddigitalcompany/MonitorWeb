@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ArrowLeft, Send } from "lucide-react";
-import { formatarHora } from "@/lib/tempo";
+import ChatBolha from "@/components/ChatBolha";
+import { classificarResposta } from "@/lib/intencao";
 
 const FILLERS_HESITACAO = ["entao", "bem", "assim", "tipo", "olha", "so um instante"];
 
@@ -13,23 +14,6 @@ function sleep(ms) {
 
 function entre(min, max) {
   return min + Math.random() * (max - min);
-}
-
-function Bolha({ de, texto, destaque = false, hora }) {
-  const propria = de === "usuario";
-  return (
-    <div className={`flex flex-col ${propria ? "items-end" : "items-start"}`}>
-      <div
-        className={`max-w-[85%] rounded-sm px-3 py-2 text-sm leading-relaxed ${
-          propria ? "bg-amber text-ink" : "border border-border bg-surface text-ink"
-        } ${destaque ? "font-semibold" : ""}`}
-      >
-        {texto}
-        {!propria && texto === "" && <span className="opacity-0">.</span>}
-      </div>
-      {hora && <span className="mt-1 px-1 text-[10px] text-muted">{formatarHora(hora)}</span>}
-    </div>
-  );
 }
 
 function BolhaDigitando() {
@@ -44,6 +28,17 @@ function BolhaDigitando() {
   );
 }
 
+const ETAPAS_SEM_COMPOSER = ["encerrado", "concluido"];
+
+const PLACEHOLDERS_COMPOSER = {
+  inicio: "Aguarde só um instante...",
+  processando: "Aguarde só um instante...",
+  aguardando_confirmacao: "Escreva algo ou toque em continuar",
+  aguardando_motivo: "Conte com detalhes o que aconteceu",
+  aguardando_agente: "Escreva algo ou toque em continuar",
+  aguardando_confirmacao_final: "Escreva algo pra confirmar",
+};
+
 export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, onFechar }) {
   const [mensagens, setMensagens] = useState([]);
   const [digitando, setDigitando] = useState(false);
@@ -54,6 +49,10 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
   const [erro, setErro] = useState("");
   const contadorId = useRef(0);
   const fimRef = useRef(null);
+  // Guarda a conversa completa numa referência (não só no estado) pra
+  // conseguir salvar o histórico final sem depender de um "mensagens"
+  // desatualizado dentro de funções assíncronas.
+  const mensagensRef = useRef([]);
   const supabase = createClient();
 
   useEffect(() => {
@@ -67,10 +66,9 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
 
   function falarUsuario(texto) {
     if (!texto || !texto.trim()) return;
-    setMensagens((atuais) => [
-      ...atuais,
-      { id: proximoId(), de: "usuario", texto: texto.trim(), hora: new Date() },
-    ]);
+    const nova = { id: proximoId(), de: "usuario", texto: texto.trim(), hora: new Date() };
+    mensagensRef.current.push(nova);
+    setMensagens((atuais) => [...atuais, nova]);
   }
 
   // Efeito de "digitar de verdade": a mensagem vai aparecendo letra por
@@ -104,10 +102,9 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
       }
     }
 
-    setMensagens((prev) => [
-      ...prev,
-      { id: proximoId(), de: "bot", texto: textoCompleto, destaque, hora: new Date() },
-    ]);
+    const novaMsg = { id: proximoId(), de: "bot", texto: textoCompleto, destaque, hora: new Date() };
+    mensagensRef.current.push(novaMsg);
+    setMensagens((prev) => [...prev, novaMsg]);
     setEmDigitacao(null);
   }
 
@@ -141,8 +138,9 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
     return digitando || emDigitacao !== null;
   }
 
-  async function escolherDesistir() {
-    falarUsuario("Desistir");
+  async function escolherDesistir(textoBolha = "Desistir") {
+    falarUsuario(textoBolha);
+    setComposerValor("");
     setEtapa("encerrado");
     setTimeout(onFechar, 500);
   }
@@ -168,8 +166,9 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
     setEtapa("aguardando_agente");
   }
 
-  async function agenteCancelar() {
-    falarUsuario("Cancelar");
+  async function agenteCancelar(textoBolha = "Cancelar") {
+    falarUsuario(textoBolha);
+    setComposerValor("");
     setEtapa("encerrado");
     setTimeout(onFechar, 500);
   }
@@ -189,6 +188,15 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
       { destaque: true }
     );
     setEtapa("aguardando_confirmacao_final");
+  }
+
+  // Quando a resposta em texto livre não deu pra entender se é "sim" ou
+  // "não", o bot pede pra pessoa esclarecer — sem sair da etapa atual, os
+  // botões continuam disponíveis do mesmo jeito.
+  async function pedirEsclarecimento(textoBolha, pergunta) {
+    falarUsuario(textoBolha);
+    setComposerValor("");
+    await falarBot(pergunta, { pensar: [4000, 9000] });
   }
 
   async function avancarEnvio(textoBolha) {
@@ -213,27 +221,63 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
 
     await falarBot("Pedido de reembolso efetuado com sucesso!", { destaque: true });
     await falarBot("Em análise, acompanhe por aqui cada etapa.", { destaque: true });
+
+    // Salva a conversa inteira junto com o pedido, pra pessoa conseguir ver
+    // esse histórico de novo depois (sem precisar reencenar tudo).
+    const conversaFinal = mensagensRef.current.map((m) => ({
+      de: m.de,
+      texto: m.texto,
+      destaque: !!m.destaque,
+      hora: new Date(m.hora).toISOString(),
+    }));
+    const { data: atualizado } = await supabase
+      .from("pedidos_reembolso")
+      .update({ conversa: conversaFinal })
+      .eq("id", novo.id)
+      .select()
+      .single();
+
     setEtapa("concluido");
-    setTimeout(() => onConcluido(novo), 900);
+    setTimeout(() => onConcluido(atualizado || { ...novo, conversa: conversaFinal }), 900);
   }
 
   function enviarComposer() {
     const texto = composerValor.trim();
     if (!texto || bloqueado()) return;
-    if (etapa === "aguardando_confirmacao") avancarConfirmacao(texto);
-    else if (etapa === "aguardando_motivo") avancarMotivo(texto);
-    else if (etapa === "aguardando_agente") avancarAgente(texto);
-    else if (etapa === "aguardando_confirmacao_final") avancarEnvio(texto);
+
+    if (etapa === "aguardando_confirmacao") {
+      const intencao = classificarResposta(texto);
+      if (intencao === "negativo") escolherDesistir(texto);
+      else if (intencao === "positivo") avancarConfirmacao(texto);
+      else
+        pedirEsclarecimento(
+          texto,
+          "Não entendi direito — você quer continuar com o cancelamento ou prefere desistir? Pode escrever de novo ou tocar num dos botões abaixo."
+        );
+    } else if (etapa === "aguardando_motivo") {
+      avancarMotivo(texto);
+    } else if (etapa === "aguardando_agente") {
+      const intencao = classificarResposta(texto);
+      if (intencao === "negativo") agenteCancelar(texto);
+      else if (intencao === "positivo") avancarAgente(texto);
+      else
+        pedirEsclarecimento(
+          texto,
+          "Não entendi — posso continuar com o pedido de reembolso ou você prefere cancelar por aqui? Escreve de novo ou usa os botões."
+        );
+    } else if (etapa === "aguardando_confirmacao_final") {
+      const intencao = classificarResposta(texto);
+      if (intencao === "positivo") avancarEnvio(texto);
+      else
+        pedirEsclarecimento(
+          texto,
+          "Só confirma quando estiver de acordo — pode escrever “sim” ou tocar no botão abaixo pra eu enviar o pedido."
+        );
+    }
   }
 
-  const placeholdersComposer = {
-    aguardando_confirmacao: "Escreva algo ou toque em continuar",
-    aguardando_motivo: "Conte com detalhes o que aconteceu",
-    aguardando_agente: "Escreva algo ou toque em continuar",
-    aguardando_confirmacao_final: "Escreva algo pra confirmar",
-  };
-
-  const mostraComposer = Object.prototype.hasOwnProperty.call(placeholdersComposer, etapa);
+  const mostraComposer = !ETAPAS_SEM_COMPOSER.includes(etapa);
+  const placeholderAtual = PLACEHOLDERS_COMPOSER[etapa] || "Escreva algo";
 
   return (
     <div>
@@ -243,9 +287,9 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
 
       <div className="mb-4 flex flex-col gap-2.5">
         {mensagens.map((m) => (
-          <Bolha key={m.id} de={m.de} texto={m.texto} destaque={m.destaque} hora={m.hora} />
+          <ChatBolha key={m.id} de={m.de} texto={m.texto} destaque={m.destaque} hora={m.hora} />
         ))}
-        {emDigitacao && <Bolha de="bot" texto={emDigitacao.texto} destaque={emDigitacao.destaque} />}
+        {emDigitacao && <ChatBolha de="bot" texto={emDigitacao.texto} destaque={emDigitacao.destaque} />}
         {digitando && !emDigitacao && <BolhaDigitando />}
         <div ref={fimRef} />
       </div>
@@ -253,7 +297,7 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
       {etapa === "aguardando_confirmacao" && (
         <div className="mb-2 flex gap-2">
           <button
-            onClick={escolherDesistir}
+            onClick={() => escolherDesistir()}
             disabled={bloqueado()}
             className="flex-1 rounded-sm border border-border px-3 py-2 text-sm text-ink disabled:opacity-50"
           >
@@ -272,7 +316,7 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
       {etapa === "aguardando_agente" && (
         <div className="mb-2 flex gap-2">
           <button
-            onClick={agenteCancelar}
+            onClick={() => agenteCancelar()}
             disabled={bloqueado()}
             className="flex-1 rounded-sm border border-border px-3 py-2 text-sm text-ink disabled:opacity-50"
           >
@@ -307,7 +351,7 @@ export default function CancelamentoCompra({ userId, nomeUsuario, onConcluido, o
             value={composerValor}
             onChange={(e) => setComposerValor(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && enviarComposer()}
-            placeholder={placeholdersComposer[etapa]}
+            placeholder={placeholderAtual}
             disabled={bloqueado()}
             className="field-input disabled:opacity-50"
           />
