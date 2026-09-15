@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Trash2, Upload, Send, ArrowLeft } from "lucide-react";
 import { extrairIdYoutube } from "@/lib/youtube";
 import { TEXTOS_PADRAO } from "@/lib/textos";
 import { calcularEtapaReembolso } from "@/lib/reembolso";
-import { formatarHora } from "@/lib/tempo";
+import { formatarHora, tempoRelativo } from "@/lib/tempo";
 import { ABAS } from "@/components/DashboardChrome";
 import PainelAoVivo from "@/components/admin/PainelAoVivo";
 
@@ -777,7 +777,8 @@ function SecaoSuporte({ chamadosIniciais }) {
     return (
       <div>
         <button onClick={() => setAbertoId(null)} className="mb-4 flex items-center gap-1.5 text-sm text-muted"><ArrowLeft size={15} /> Voltar</button>
-        <p className="mb-4 font-extrabold tracking-tight text-lg text-ink">{chamado.assunto}</p>
+        <p className="font-extrabold tracking-tight text-lg text-ink">{chamado.nome || chamado.email}</p>
+        <p className="mb-4 text-xs text-muted">{chamado.assunto}</p>
         <div className="mb-4 flex flex-col gap-2.5">
           {chamado.mensagens.map((m) => (
             <div key={m.id} className={`flex flex-col ${m.remetente === "suporte" ? "items-end" : "items-start"}`}>
@@ -802,11 +803,12 @@ function SecaoSuporte({ chamadosIniciais }) {
       {chamados.map((c) => (
         <button key={c.id} onClick={() => setAbertoId(c.id)} className="w-full rounded-sm border border-border bg-surface p-3 text-left">
           <div className="mb-1 flex items-start justify-between gap-2">
-            <p className="text-sm text-ink">{c.assunto}</p>
+            <p className="text-sm text-ink">{c.nome || c.email}</p>
             <span className={`shrink-0 rounded-sm border px-1.5 py-0.5 text-[10px] ${c.status === "respondido" ? "border-olive text-olive" : "border-amber text-amber"}`}>
               {c.status === "respondido" ? "Respondido" : "Aberto"}
             </span>
           </div>
+          <p className="mb-0.5 truncate text-xs text-muted">{c.assunto}</p>
           <p className="truncate text-xs text-muted">{c.mensagens[c.mensagens.length - 1]?.texto}</p>
         </button>
       ))}
@@ -921,8 +923,43 @@ function TextoEditavel({ chave, label, valorInicial }) {
 }
 
 
+const ORDENACOES_CLIENTES = [
+  { id: "nome", label: "Nome" },
+  { id: "criado_recente", label: "Criado: mais recente" },
+  { id: "criado_antigo", label: "Criado: mais antigo" },
+  { id: "acesso_recente", label: "Último acesso: mais recente" },
+  { id: "acesso_antigo", label: "Último acesso: mais antigo / nunca" },
+];
+
 function SecaoClientes({ itens, erroConfig }) {
   const [clientes, setClientes] = useState(itens);
+  const [ordenacao, setOrdenacao] = useState("nome");
+
+  const clientesOrdenados = useMemo(() => {
+    const lista = [...clientes];
+    switch (ordenacao) {
+      case "criado_recente":
+        return lista.sort((a, b) => new Date(b.criadoEmIso) - new Date(a.criadoEmIso));
+      case "criado_antigo":
+        return lista.sort((a, b) => new Date(a.criadoEmIso) - new Date(b.criadoEmIso));
+      case "acesso_recente":
+        return lista.sort((a, b) => {
+          if (!a.ultimoAcessoIso && !b.ultimoAcessoIso) return 0;
+          if (!a.ultimoAcessoIso) return 1;
+          if (!b.ultimoAcessoIso) return -1;
+          return new Date(b.ultimoAcessoIso) - new Date(a.ultimoAcessoIso);
+        });
+      case "acesso_antigo":
+        return lista.sort((a, b) => {
+          if (!a.ultimoAcessoIso && !b.ultimoAcessoIso) return 0;
+          if (!a.ultimoAcessoIso) return -1;
+          if (!b.ultimoAcessoIso) return 1;
+          return new Date(a.ultimoAcessoIso) - new Date(b.ultimoAcessoIso);
+        });
+      default:
+        return lista.sort((a, b) => (a.nome || a.email).localeCompare(b.nome || b.email));
+    }
+  }, [clientes, ordenacao]);
 
   if (erroConfig) {
     return (
@@ -938,12 +975,25 @@ function SecaoClientes({ itens, erroConfig }) {
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="mb-2 text-xs text-muted">
-        {clientes.length === 0
-          ? "Nenhum cliente usando o app ainda."
-          : `${clientes.length} cliente${clientes.length > 1 ? "s" : ""} usando o app.`}
-      </p>
-      {clientes.map((cliente) => (
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className="text-xs text-muted">
+          {clientes.length === 0
+            ? "Nenhum cliente usando o app ainda."
+            : `${clientes.length} cliente${clientes.length > 1 ? "s" : ""} usando o app.`}
+        </p>
+        <select
+          value={ordenacao}
+          onChange={(e) => setOrdenacao(e.target.value)}
+          className="field-input w-auto shrink-0 py-1.5 text-xs"
+        >
+          {ORDENACOES_CLIENTES.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      {clientesOrdenados.map((cliente) => (
         <ClienteCard
           key={cliente.id}
           cliente={cliente}
@@ -1041,6 +1091,9 @@ function ClienteCard({ cliente, onRemovido }) {
         </div>
       </div>
       <p className="mt-2 text-[11px] text-muted">Entrou em {cliente.criadoEm}</p>
+      <p className="text-[11px] text-muted">
+        {cliente.ultimoAcessoIso ? `Último acesso ${tempoRelativo(cliente.ultimoAcessoIso)}` : "Nunca acessou o app"}
+      </p>
 
       <div className="mt-3 flex gap-2">
         <button

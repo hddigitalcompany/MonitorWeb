@@ -104,6 +104,7 @@ export default async function AdminPage() {
     ajudaRapida,
     chamados,
     pedidosReembolso,
+    perfis,
     { clientes, mapaUsuarios, erroConfig },
     eventosVisita,
   ] = await Promise.all([
@@ -122,6 +123,7 @@ export default async function AdminPage() {
       .select("*, mensagens_suporte(*)")
       .order("criado_em", { ascending: false }),
     supabase.from("pedidos_reembolso").select("*").order("criado_em", { ascending: false }),
+    supabase.from("perfis_usuario").select("user_id, ultimo_acesso"),
     buscarClientesEUsuarios(supabase, idsAdmins),
     buscarEventosVisita(supabase, idsAdmins, desde32Dias),
   ]);
@@ -134,6 +136,24 @@ export default async function AdminPage() {
       email: info?.email || "Conta removida",
     };
   });
+
+  // Suporte não trazia o nome do cliente porque chamados_suporte só
+  // guarda o user_id — junta com o mesmo mapa de usuários usado nos
+  // reembolsos.
+  const chamadosComNome = (chamados.data || []).map((c) => {
+    const info = mapaUsuarios.get(c.user_id);
+    return {
+      ...c,
+      nome: info?.nome || "",
+      email: info?.email || "Conta removida",
+    };
+  });
+
+  const mapaUltimoAcesso = new Map((perfis.data || []).map((p) => [p.user_id, p.ultimo_acesso]));
+  const clientesComAcesso = clientes.map((c) => ({
+    ...c,
+    ultimoAcessoIso: mapaUltimoAcesso.get(c.id) || null,
+  }));
 
   return (
     <AdminDashboard
@@ -148,8 +168,8 @@ export default async function AdminPage() {
         contatos: contatos.data || [],
         textos: textos.data || [],
         ajudaRapida: ajudaRapida.data || [],
-        chamados: chamados.data || [],
-        clientes,
+        chamados: chamadosComNome,
+        clientes: clientesComAcesso,
         erroClientes: erroConfig,
         reembolsos,
         eventosVisita,
