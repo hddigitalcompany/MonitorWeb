@@ -123,7 +123,7 @@ export default async function AdminPage() {
       .select("*, mensagens_suporte(*)")
       .order("criado_em", { ascending: false }),
     supabase.from("pedidos_reembolso").select("*").order("criado_em", { ascending: false }),
-    supabase.from("perfis_usuario").select("user_id, ultimo_acesso"),
+    supabase.from("perfis_usuario").select("user_id, ultimo_acesso, telefone"),
     buscarClientesEUsuarios(supabase, idsAdmins),
     buscarEventosVisita(supabase, idsAdmins, desde32Dias),
   ]);
@@ -149,11 +149,15 @@ export default async function AdminPage() {
     };
   });
 
-  const mapaUltimoAcesso = new Map((perfis.data || []).map((p) => [p.user_id, p.ultimo_acesso]));
-  const clientesComAcesso = clientes.map((c) => ({
-    ...c,
-    ultimoAcessoIso: mapaUltimoAcesso.get(c.id) || null,
-  }));
+  const mapaPerfis = new Map((perfis.data || []).map((p) => [p.user_id, p]));
+  const clientesComAcesso = clientes.map((c) => {
+    const perfil = mapaPerfis.get(c.id);
+    return {
+      ...c,
+      ultimoAcessoIso: perfil?.ultimo_acesso || null,
+      telefone: perfil?.telefone || null,
+    };
+  });
 
   return (
     <AdminDashboard

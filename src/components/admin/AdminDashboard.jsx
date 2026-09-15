@@ -7,6 +7,7 @@ import { extrairIdYoutube } from "@/lib/youtube";
 import { TEXTOS_PADRAO } from "@/lib/textos";
 import { calcularEtapaReembolso } from "@/lib/reembolso";
 import { formatarHora, tempoRelativo } from "@/lib/tempo";
+import { formatarTelefone } from "@/lib/telefone";
 import { ABAS } from "@/components/DashboardChrome";
 import PainelAoVivo from "@/components/admin/PainelAoVivo";
 
@@ -1093,6 +1094,9 @@ function ClienteCard({ cliente, onRemovido }) {
       <p className="mt-2 text-[11px] text-muted">Entrou em {cliente.criadoEm}</p>
       <p className="text-[11px] text-muted">
         {cliente.ultimoAcessoIso ? `Último acesso ${tempoRelativo(cliente.ultimoAcessoIso)}` : "Nunca acessou o app"}
+      </p>
+      <p className="text-[11px] text-muted">
+        {cliente.telefone ? `Telefone: ${formatarTelefone(cliente.telefone)}` : "Telefone: não informado"}
       </p>
 
       <div className="mt-3 flex gap-2">
