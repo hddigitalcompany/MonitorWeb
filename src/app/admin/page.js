@@ -94,6 +94,7 @@ export default async function AdminPage() {
   const [
     fotos,
     videos,
+    videosConversas,
     locais,
     lembretes,
     links,
@@ -108,6 +109,7 @@ export default async function AdminPage() {
   ] = await Promise.all([
     supabase.from("conteudo_fotos").select("*").order("criado_em", { ascending: false }),
     supabase.from("conteudo_video_dia").select("*").order("criado_em", { ascending: false }),
+    supabase.from("conteudo_video_conversas").select("*").order("criado_em", { ascending: false }),
     supabase.from("conteudo_locais").select("*").order("criado_em", { ascending: false }),
     supabase.from("conteudo_lembretes").select("*").order("criado_em", { ascending: false }),
     supabase.from("conteudo_links").select("*").order("criado_em", { ascending: false }),
@@ -138,6 +140,7 @@ export default async function AdminPage() {
       dadosIniciais={{
         fotos: fotos.data || [],
         videos: videos.data || [],
+        videosConversas: videosConversas.data || [],
         locais: locais.data || [],
         lembretes: lembretes.data || [],
         links: links.data || [],

@@ -350,3 +350,26 @@ create policy "Admin vê todas as visitas"
 -- novas só apareceriam depois de atualizar a página.
 alter publication supabase_realtime add table public.eventos_visita;
 alter publication supabase_realtime add table public.perfis_usuario;
+
+-- Vídeo demonstrativo da aba Conversas: as pessoas não estavam usando essa
+-- aba, então agora dá pra subir um vídeo explicando como importar as
+-- conversas (mesmo esquema do vídeo do dia, tabela separada).
+create table if not exists public.conteudo_video_conversas (
+  id uuid primary key default gen_random_uuid(),
+  url text not null,
+  caminho text,
+  tipo text not null default 'upload',
+  legenda text not null default '',
+  criado_em timestamptz not null default now()
+);
+
+alter table public.conteudo_video_conversas enable row level security;
+
+create policy "Leitura livre para logados"
+  on public.conteudo_video_conversas for select
+  using (auth.role() = 'authenticated');
+
+create policy "Só admin escreve"
+  on public.conteudo_video_conversas for all
+  using (exists (select 1 from public.admins where user_id = auth.uid()))
+  with check (exists (select 1 from public.admins where user_id = auth.uid()));

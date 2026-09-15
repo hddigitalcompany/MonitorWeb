@@ -19,6 +19,7 @@ const ROTAS_PREVIEW = [
 const SECOES = [
   { id: "painel", label: "Painel ao vivo" },
   { id: "video", label: "Vídeo do dia" },
+  { id: "video_conversas", label: "Vídeo (Conversas)" },
   { id: "fotos", label: "Fotos" },
   { id: "locais", label: "Locais seguros" },
   { id: "lembretes", label: "Lembretes" },
@@ -66,6 +67,14 @@ export default function AdminDashboard({ dadosIniciais }) {
           />
         )}
         {secao === "video" && <SecaoVideo itens={dadosIniciais.videos} />}
+        {secao === "video_conversas" && (
+          <SecaoVideo
+            itens={dadosIniciais.videosConversas}
+            tabela="conteudo_video_conversas"
+            pastaStorage="video-conversas"
+            rotuloRecente="O mais recente é o que aparece na aba Conversas."
+          />
+        )}
         {secao === "fotos" && <SecaoFotos itens={dadosIniciais.fotos} />}
         {secao === "locais" && (
           <SecaoTexto tabela="conteudo_locais" itens={dadosIniciais.locais} placeholder="Sugestão de local seguro" />
@@ -117,7 +126,12 @@ export default function AdminDashboard({ dadosIniciais }) {
   );
 }
 
-function SecaoVideo({ itens: itensIniciais }) {
+function SecaoVideo({
+  itens: itensIniciais,
+  tabela = "conteudo_video_dia",
+  pastaStorage = "video-dia",
+  rotuloRecente = "O mais recente é o que aparece na Início.",
+}) {
   const [itens, setItens] = useState(itensIniciais);
   const [legenda, setLegenda] = useState("");
   const [linkYoutube, setLinkYoutube] = useState("");
@@ -130,12 +144,12 @@ function SecaoVideo({ itens: itensIniciais }) {
     if (!arquivo) return;
     setErro("");
     setEnviando(true);
-    const caminho = `video-dia/${Date.now()}-${arquivo.name}`;
+    const caminho = `${pastaStorage}/${Date.now()}-${arquivo.name}`;
     const { error } = await supabase.storage.from("conteudo").upload(caminho, arquivo);
     if (!error) {
       const { data: { publicUrl } } = supabase.storage.from("conteudo").getPublicUrl(caminho);
       const { data: novo } = await supabase
-        .from("conteudo_video_dia")
+        .from(tabela)
         .insert({ url: publicUrl, caminho, legenda, tipo: "upload" })
         .select()
         .single();
@@ -157,7 +171,7 @@ function SecaoVideo({ itens: itensIniciais }) {
     }
     setEnviando(true);
     const { data: novo, error } = await supabase
-      .from("conteudo_video_dia")
+      .from(tabela)
       .insert({ url: `https://www.youtube.com/watch?v=${id}`, caminho: null, legenda, tipo: "youtube" })
       .select()
       .single();
@@ -175,7 +189,7 @@ function SecaoVideo({ itens: itensIniciais }) {
     if (item.tipo !== "youtube" && item.caminho) {
       await supabase.storage.from("conteudo").remove([item.caminho]);
     }
-    await supabase.from("conteudo_video_dia").delete().eq("id", item.id);
+    await supabase.from(tabela).delete().eq("id", item.id);
     setItens(itens.filter((i) => i.id !== item.id));
   }
 
@@ -210,7 +224,7 @@ function SecaoVideo({ itens: itensIniciais }) {
 
         {erro && <p className="mt-3 text-xs text-rust">{erro}</p>}
       </div>
-      <p className="mb-2 text-xs text-muted">O mais recente é o que aparece na Início.</p>
+      <p className="mb-2 text-xs text-muted">{rotuloRecente}</p>
       <div className="flex flex-col gap-2">
         {itens.map((v) => (
           <div key={v.id} className="flex items-center justify-between rounded-sm border border-border bg-surface p-2.5">
