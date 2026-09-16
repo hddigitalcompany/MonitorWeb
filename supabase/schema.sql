@@ -631,3 +631,13 @@ where c.id = n.id;
 
 alter table public.conversas_demo add column if not exists liberacao_intervalo_enviadas_minutos integer;
 alter table public.conversas_demo add column if not exists liberacao_intervalo_recebidas_minutos integer;
+
+-- ============================================================
+-- DIA DE LIBERAÇÃO DA CONVERSA INTEIRA: a partir de quantas horas
+-- depois de criada a conta a conversa aparece pro cliente (0 = aparece
+-- desde o início). Escolhido pelo admin numa caixinha rápida direto na
+-- lista de conversas, sem precisar abrir a edição. Também é o campo
+-- usado pra ordenar a lista de conversas.
+-- ============================================================
+
+alter table public.conversas_demo add column if not exists horas_liberacao integer not null default 0;

@@ -18,7 +18,6 @@ import {
   Headset,
   MessageCircle,
   Users,
-  ChevronUp,
   CreditCard,
   LogIn,
   ChevronDown,
@@ -1273,6 +1272,11 @@ const TIPOS_CONVERSA_DEMO = [
   { id: "grupo", label: "Conversa em grupo" },
 ];
 
+// Opções do seletor rápido de "que dia essa conversa aparece pro
+// cliente" — Dia 1 é assim que a conta é criada, Dia 2 é 24h depois, e
+// por aí vai (a contagem é sempre em horas desde a criação da conta).
+const OPCOES_DIA_LIBERACAO_CONVERSA = Array.from({ length: 14 }, (_, i) => ({ dia: i + 1, horas: i * 24 }));
+
 function SecaoConversasDemo({ itens: itensIniciais }) {
   const [conversas, setConversas] = useState(itensIniciais);
   const [tipo, setTipo] = useState("normal");
@@ -1317,7 +1321,7 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
     supabase
       .from("conversas_demo")
       .select("*")
-      .order("ordem_exibicao", { ascending: true, nullsFirst: false })
+      .order("horas_liberacao", { ascending: true, nullsFirst: false })
       .order("criado_em", { ascending: false })
       .then(({ data }) => {
         if (data) setConversas(data);
@@ -1440,8 +1444,6 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
       }
     }
 
-    const proximaOrdem = conversas.reduce((max, c) => Math.max(max, c.ordem_exibicao || 0), 0) + 1;
-
     const { data: conversa, error: erroConversa } = await supabase
       .from("conversas_demo")
       .insert({
@@ -1453,7 +1455,6 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
         foto_url: fotoUrl,
         foto_caminho: fotoCaminho,
         liberacao_quantidade_inicial: liberacaoInicial !== "" ? parseInt(liberacaoInicial, 10) : null,
-        ordem_exibicao: proximaOrdem,
         ...(tipo === "grupo"
           ? { liberacao_intervalo_minutos: liberacaoMinutos ? parseInt(liberacaoMinutos, 10) : null }
           : {
@@ -1483,7 +1484,9 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
       setErro("A conversa foi criada, mas as mensagens não salvaram direito. Exclua e tente de novo.");
     }
 
-    setConversas([...conversas, conversa]);
+    setConversas(
+      [...conversas, conversa].sort((a, b) => (a.horas_liberacao || 0) - (b.horas_liberacao || 0))
+    );
     setMensagensPorConversa((atual) => ({ ...atual, [conversa.id]: mensagensParaSalvar }));
     setTitulo("");
     limparRascunho();
@@ -1517,28 +1520,23 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
     if (abertaId === conversa.id) setAbertaId(null);
   }
 
-  // Troca a ordem de exibição entre essa conversa e a vizinha (pra cima
-  // ou pra baixo), tanto no banco quanto na lista local, pra refletir na
-  // hora tanto aqui no admin quanto na lista que o cliente vê.
-  async function moverOrdem(conversa, direcao) {
-    const indice = conversas.findIndex((c) => c.id === conversa.id);
-    const indiceAlvo = indice + direcao;
-    if (indiceAlvo < 0 || indiceAlvo >= conversas.length) return;
-
-    const atual = conversas[indice];
-    const alvo = conversas[indiceAlvo];
-    const ordemAtual = atual.ordem_exibicao || 0;
-    const ordemAlvo = alvo.ordem_exibicao || 0;
-
-    await Promise.all([
-      supabase.from("conversas_demo").update({ ordem_exibicao: ordemAlvo }).eq("id", atual.id),
-      supabase.from("conversas_demo").update({ ordem_exibicao: ordemAtual }).eq("id", alvo.id),
-    ]);
-
-    const novaLista = [...conversas];
-    novaLista[indice] = { ...alvo, ordem_exibicao: ordemAtual };
-    novaLista[indiceAlvo] = { ...atual, ordem_exibicao: ordemAlvo };
-    setConversas(novaLista);
+  // Muda direto na lista, sem precisar abrir a edição, a partir de
+  // quantas horas depois de criada a conta essa conversa aparece pro
+  // cliente — e já reordena a lista por esse valor.
+  async function mudarHorasLiberacao(conversa, horas) {
+    const { data, error } = await supabase
+      .from("conversas_demo")
+      .update({ horas_liberacao: horas })
+      .eq("id", conversa.id)
+      .select()
+      .single();
+    if (!error && data) {
+      setConversas((atual) =>
+        atual
+          .map((c) => (c.id === conversa.id ? data : c))
+          .sort((a, b) => (a.horas_liberacao || 0) - (b.horas_liberacao || 0))
+      );
+    }
   }
 
   function iniciarEdicao(conversa) {
@@ -1934,22 +1932,6 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
             ) : (
               <div className="flex items-center justify-between gap-2">
                 <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                  <div className="flex shrink-0 flex-col">
-                    <button
-                      onClick={() => moverOrdem(c, -1)}
-                      disabled={conversas.findIndex((x) => x.id === c.id) === 0}
-                      className="text-muted hover:text-ink disabled:opacity-20"
-                    >
-                      <ChevronUp size={14} />
-                    </button>
-                    <button
-                      onClick={() => moverOrdem(c, 1)}
-                      disabled={conversas.findIndex((x) => x.id === c.id) === conversas.length - 1}
-                      className="text-muted hover:text-ink disabled:opacity-20"
-                    >
-                      <ChevronDown size={14} />
-                    </button>
-                  </div>
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-amber/20 text-ink">
                     {c.foto_url ? (
                       <img src={c.foto_url} alt="" className="h-full w-full object-cover" />
@@ -1967,6 +1949,21 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
                       </span>
                     </div>
                     <p className="text-[11px] text-muted">{c.total_mensagens} mensagens · você é {c.participante_voce}</p>
+                    <div className="mt-1 flex items-center gap-1.5">
+                      <label className="text-[11px] text-muted">Aparece a partir de:</label>
+                      <select
+                        value={c.horas_liberacao || 0}
+                        onChange={(e) => mudarHorasLiberacao(c, parseInt(e.target.value, 10))}
+                        onClick={(e) => e.stopPropagation()}
+                        className="rounded-sm border border-border bg-surface px-1 py-0.5 text-[11px] text-ink"
+                      >
+                        {OPCOES_DIA_LIBERACAO_CONVERSA.map((o) => (
+                          <option key={o.dia} value={o.horas}>
+                            Dia {o.dia}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
                 <div className="flex shrink-0 gap-2">

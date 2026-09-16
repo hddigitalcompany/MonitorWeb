@@ -5,6 +5,8 @@ import ConversasDemo from "@/components/ConversasDemo";
 import ConversasReais from "@/components/ConversasReais";
 import { extrairIdYoutube } from "@/lib/youtube";
 import { buscarTextos, texto } from "@/lib/textos";
+import { garantirPerfilUsuario } from "@/lib/perfil";
+import { conversaLiberada } from "@/lib/liberacaoConversa";
 
 export default async function ConversasPage() {
   const supabase = createClient();
@@ -23,9 +25,14 @@ export default async function ConversasPage() {
     supabase
       .from("conversas_demo")
       .select("*")
-      .order("ordem_exibicao", { ascending: true, nullsFirst: false })
+      .order("horas_liberacao", { ascending: true, nullsFirst: false })
       .order("criado_em", { ascending: false }),
   ]);
+
+  const perfil = await garantirPerfilUsuario(supabase, user.id);
+  const conversasDemoLiberadas = (conversasDemo || []).filter((c) =>
+    conversaLiberada(c.horas_liberacao, perfil.primeiro_login)
+  );
 
   const video = videos?.[0];
   const idYoutube = video?.tipo === "youtube" ? extrairIdYoutube(video.url) : null;
@@ -58,7 +65,7 @@ export default async function ConversasPage() {
 
       <ConversasReais userId={user.id} textos={textos} />
 
-      <ConversasDemo conversas={conversasDemo || []} userId={user.id} textos={textos} />
+      <ConversasDemo conversas={conversasDemoLiberadas} userId={user.id} textos={textos} />
 
       <ImportarConversas conversasIniciais={conversas || []} userId={user.id} />
     </div>

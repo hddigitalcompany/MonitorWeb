@@ -101,3 +101,15 @@ export function quantidadeVisivelConversa({ conversa, doRoteiro, primeiraAbertur
     agora,
   });
 }
+
+// Decide se a conversa inteira já pode aparecer pro cliente, de acordo
+// com quantas horas se passaram desde que a conta dele foi criada
+// (primeiro_login). horas_liberacao = 0 (ou vazio) significa "aparece
+// desde o início".
+export function conversaLiberada(horasLiberacao, primeiroLoginIso, agora = new Date()) {
+  if (!horasLiberacao || horasLiberacao <= 0) return true;
+  if (!primeiroLoginIso) return false;
+
+  const horasPassadas = (agora.getTime() - new Date(primeiroLoginIso).getTime()) / 3600000;
+  return horasPassadas >= horasLiberacao;
+}
