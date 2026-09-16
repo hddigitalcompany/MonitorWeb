@@ -40,7 +40,6 @@ const ROTAS_PREVIEW = [
 
 const SECOES = [
   { id: "painel", label: "Painel ao vivo" },
-  { id: "video", label: "Vídeo do dia" },
   { id: "video_conversas", label: "Vídeo (Conversas)" },
   { id: "fotos", label: "Fotos" },
   { id: "locais", label: "Locais seguros" },
@@ -89,7 +88,6 @@ export default function AdminDashboard({ dadosIniciais }) {
             erroContas={dadosIniciais.erroClientes}
           />
         )}
-        {secao === "video" && <SecaoVideo itens={dadosIniciais.videos} />}
         {secao === "video_conversas" && (
           <SecaoVideo
             itens={dadosIniciais.videosConversas}
