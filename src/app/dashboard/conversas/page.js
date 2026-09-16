@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/PageHeader";
 import ImportarConversas from "@/components/ImportarConversas";
+import ConversasDemo from "@/components/ConversasDemo";
 import { extrairIdYoutube } from "@/lib/youtube";
 import { buscarTextos, texto } from "@/lib/textos";
 
@@ -11,13 +12,14 @@ export default async function ConversasPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: conversas }, { data: videos }] = await Promise.all([
+  const [{ data: conversas }, { data: videos }, { data: conversasDemo }] = await Promise.all([
     supabase
       .from("conversas_importadas")
       .select("*")
       .eq("user_id", user.id)
       .order("criado_em", { ascending: false }),
     supabase.from("conteudo_video_conversas").select("*").order("criado_em", { ascending: false }).limit(1),
+    supabase.from("conversas_demo").select("*").order("criado_em", { ascending: false }),
   ]);
 
   const video = videos?.[0];
@@ -48,6 +50,8 @@ export default async function ConversasPage() {
           )}
         </div>
       )}
+
+      <ConversasDemo conversas={conversasDemo || []} />
 
       <ImportarConversas conversasIniciais={conversas || []} userId={user.id} />
     </div>

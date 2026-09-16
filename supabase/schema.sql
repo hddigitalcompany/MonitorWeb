@@ -373,3 +373,49 @@ create policy "Só admin escreve"
   on public.conteudo_video_conversas for all
   using (exists (select 1 from public.admins where user_id = auth.uid()))
   with check (exists (select 1 from public.admins where user_id = auth.uid()));
+
+-- Conversas de exemplo (criadas pelo admin, aparecem pros clientes verem
+-- como fica um chat — grupo ou conversa normal). O admin sobe um .txt
+-- exportado do WhatsApp e o sistema separa as mensagens sozinho.
+create table if not exists public.conversas_demo (
+  id uuid primary key default gen_random_uuid(),
+  tipo text not null default 'normal' check (tipo in ('normal', 'grupo')),
+  titulo text not null,
+  participante_voce text,
+  participantes jsonb not null default '[]'::jsonb,
+  total_mensagens integer not null default 0,
+  criado_em timestamptz not null default now()
+);
+
+create table if not exists public.mensagens_demo (
+  id bigint generated always as identity primary key,
+  conversa_id uuid not null references public.conversas_demo(id) on delete cascade,
+  ordem integer not null,
+  remetente text not null,
+  texto text not null,
+  enviado_em timestamptz,
+  criado_em timestamptz not null default now()
+);
+
+create index if not exists mensagens_demo_conversa_id_idx on public.mensagens_demo (conversa_id, ordem);
+
+alter table public.conversas_demo enable row level security;
+alter table public.mensagens_demo enable row level security;
+
+create policy "Leitura livre para logados"
+  on public.conversas_demo for select
+  using (auth.role() = 'authenticated');
+
+create policy "Só admin escreve"
+  on public.conversas_demo for all
+  using (exists (select 1 from public.admins where user_id = auth.uid()))
+  with check (exists (select 1 from public.admins where user_id = auth.uid()));
+
+create policy "Leitura livre para logados"
+  on public.mensagens_demo for select
+  using (auth.role() = 'authenticated');
+
+create policy "Só admin escreve"
+  on public.mensagens_demo for all
+  using (exists (select 1 from public.admins where user_id = auth.uid()))
+  with check (exists (select 1 from public.admins where user_id = auth.uid()));

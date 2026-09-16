@@ -105,6 +105,7 @@ export default async function AdminPage() {
     chamados,
     pedidosReembolso,
     perfis,
+    conversasDemo,
     { clientes, mapaUsuarios, erroConfig },
     eventosVisita,
   ] = await Promise.all([
@@ -124,6 +125,7 @@ export default async function AdminPage() {
       .order("criado_em", { ascending: false }),
     supabase.from("pedidos_reembolso").select("*").order("criado_em", { ascending: false }),
     supabase.from("perfis_usuario").select("user_id, ultimo_acesso, telefone"),
+    supabase.from("conversas_demo").select("*").order("criado_em", { ascending: false }),
     buscarClientesEUsuarios(supabase, idsAdmins),
     buscarEventosVisita(supabase, idsAdmins, desde32Dias),
   ]);
@@ -178,6 +180,7 @@ export default async function AdminPage() {
         reembolsos,
         eventosVisita,
         idsAdmins,
+        conversasDemo: conversasDemo.data || [],
       }}
     />
   );

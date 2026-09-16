@@ -8,6 +8,8 @@ import { TEXTOS_PADRAO } from "@/lib/textos";
 import { calcularEtapaReembolso } from "@/lib/reembolso";
 import { formatarHora, tempoRelativo } from "@/lib/tempo";
 import { formatarTelefone } from "@/lib/telefone";
+import { parseWhatsAppTxt, remetentesUnicos } from "@/lib/whatsapp";
+import ConversaBolhas from "@/components/ConversaBolhas";
 import { ABAS } from "@/components/DashboardChrome";
 import PainelAoVivo from "@/components/admin/PainelAoVivo";
 
@@ -29,6 +31,7 @@ const SECOES = [
   { id: "contatos", label: "Contatos úteis" },
   { id: "ajuda", label: "Ajuda rápida" },
   { id: "suporte", label: "Suporte" },
+  { id: "conversas_demo", label: "Conversas (exemplo)" },
   { id: "clientes", label: "Clientes" },
   { id: "reembolsos", label: "Reembolsos" },
   { id: "textos", label: "Textos" },
@@ -86,6 +89,7 @@ export default function AdminDashboard({ dadosIniciais }) {
         {secao === "contatos" && <SecaoContatos itens={dadosIniciais.contatos} />}
         {secao === "ajuda" && <SecaoAjudaRapida itens={dadosIniciais.ajudaRapida} />}
         {secao === "suporte" && <SecaoSuporte chamadosIniciais={dadosIniciais.chamados} />}
+        {secao === "conversas_demo" && <SecaoConversasDemo itens={dadosIniciais.conversasDemo} />}
         {secao === "clientes" && (
           <SecaoClientes itens={dadosIniciais.clientes} erroConfig={dadosIniciais.erroClientes} />
         )}
@@ -1137,6 +1141,246 @@ function ClienteCard({ cliente, onRemovido }) {
       )}
 
       {erro && <p className="mt-2 text-xs text-rust">{erro}</p>}
+    </div>
+  );
+}
+
+
+const TIPOS_CONVERSA_DEMO = [
+  { id: "normal", label: "Conversa normal (2 pessoas)" },
+  { id: "grupo", label: "Conversa em grupo" },
+];
+
+function SecaoConversasDemo({ itens: itensIniciais }) {
+  const [conversas, setConversas] = useState(itensIniciais);
+  const [tipo, setTipo] = useState("normal");
+  const [titulo, setTitulo] = useState("");
+  const [analisando, setAnalisando] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState("");
+  const [mensagensParaSalvar, setMensagensParaSalvar] = useState(null);
+  const [participantesDetectados, setParticipantesDetectados] = useState([]);
+  const [voce, setVoce] = useState("");
+  const [abertaId, setAbertaId] = useState(null);
+  const [mensagensPorConversa, setMensagensPorConversa] = useState({});
+  const [carregandoId, setCarregandoId] = useState(null);
+  const supabase = createClient();
+
+  function lerArquivo(e) {
+    const arquivo = e.target.files?.[0];
+    if (!arquivo) return;
+    setErro("");
+    if (!titulo.trim()) {
+      setErro("Dê um título (nome do contato ou do grupo) antes de escolher o arquivo.");
+      e.target.value = "";
+      return;
+    }
+    setAnalisando(true);
+    arquivo.text().then((textoArquivo) => {
+      const msgs = parseWhatsAppTxt(textoArquivo);
+      if (msgs.length === 0) {
+        setErro("Não consegui separar nenhuma mensagem desse arquivo. Confere se é o .txt exportado do WhatsApp.");
+        setAnalisando(false);
+        e.target.value = "";
+        return;
+      }
+      const participantes = remetentesUnicos(msgs);
+      setMensagensParaSalvar(msgs);
+      setParticipantesDetectados(participantes);
+      setVoce(participantes[0] || "");
+      setAnalisando(false);
+      e.target.value = "";
+    });
+  }
+
+  async function salvar() {
+    if (!mensagensParaSalvar || !titulo.trim()) return;
+    setSalvando(true);
+    setErro("");
+
+    const { data: conversa, error: erroConversa } = await supabase
+      .from("conversas_demo")
+      .insert({
+        tipo,
+        titulo: titulo.trim(),
+        participante_voce: voce,
+        participantes: participantesDetectados,
+        total_mensagens: mensagensParaSalvar.length,
+      })
+      .select()
+      .single();
+
+    if (erroConversa || !conversa) {
+      setErro("Não deu pra salvar a conversa. Tente de novo.");
+      setSalvando(false);
+      return;
+    }
+
+    const linhas = mensagensParaSalvar.map((m, i) => ({
+      conversa_id: conversa.id,
+      ordem: i,
+      remetente: m.remetente,
+      texto: m.texto,
+      enviado_em: m.dataHoraIso,
+    }));
+
+    const { error: erroMsgs } = await supabase.from("mensagens_demo").insert(linhas);
+    if (erroMsgs) {
+      setErro("A conversa foi criada, mas as mensagens não salvaram direito. Exclua e tente de novo.");
+    }
+
+    setConversas([conversa, ...conversas]);
+    setMensagensPorConversa((atual) => ({ ...atual, [conversa.id]: mensagensParaSalvar }));
+    setTitulo("");
+    setMensagensParaSalvar(null);
+    setParticipantesDetectados([]);
+    setVoce("");
+    setSalvando(false);
+  }
+
+  function cancelarPreVisualizacao() {
+    setMensagensParaSalvar(null);
+    setParticipantesDetectados([]);
+    setVoce("");
+    setErro("");
+  }
+
+  async function verConversa(conversa) {
+    if (abertaId === conversa.id) {
+      setAbertaId(null);
+      return;
+    }
+    setAbertaId(conversa.id);
+    if (mensagensPorConversa[conversa.id]) return;
+
+    setCarregandoId(conversa.id);
+    const { data } = await supabase
+      .from("mensagens_demo")
+      .select("*")
+      .eq("conversa_id", conversa.id)
+      .order("ordem", { ascending: true });
+    setMensagensPorConversa((atual) => ({ ...atual, [conversa.id]: (data || []).map((m) => ({ ...m, dataHoraIso: m.enviado_em })) }));
+    setCarregandoId(null);
+  }
+
+  async function excluir(conversa) {
+    await supabase.from("conversas_demo").delete().eq("id", conversa.id);
+    setConversas(conversas.filter((c) => c.id !== conversa.id));
+    if (abertaId === conversa.id) setAbertaId(null);
+  }
+
+  return (
+    <div>
+      <div className="mb-4 rounded-sm border border-olive/40 bg-olive/10 px-3 py-2.5 text-xs text-muted">
+        Sobe um .txt exportado de uma conversa do WhatsApp (grupo ou normal). O sistema separa as
+        mensagens sozinho e a conversa aparece pros clientes verem como fica.
+      </div>
+
+      <div className="card mb-6">
+        <p className="field-label">Tipo</p>
+        <select value={tipo} onChange={(e) => setTipo(e.target.value)} className="field-input mb-3">
+          {TIPOS_CONVERSA_DEMO.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.label}
+            </option>
+          ))}
+        </select>
+
+        <p className="field-label">Título (nome do contato ou do grupo)</p>
+        <input
+          value={titulo}
+          onChange={(e) => setTitulo(e.target.value)}
+          placeholder="Ex: Maria, ou Grupo da Família"
+          className="field-input mb-3"
+        />
+
+        {!mensagensParaSalvar ? (
+          <label className="btn-primary block cursor-pointer text-center">
+            {analisando ? "Lendo arquivo..." : "Escolher arquivo .txt"}
+            <input type="file" accept=".txt" onChange={lerArquivo} disabled={analisando} className="hidden" />
+          </label>
+        ) : (
+          <div>
+            <p className="mb-2 text-xs text-muted">
+              {mensagensParaSalvar.length} mensagens encontradas, de {participantesDetectados.length}{" "}
+              {participantesDetectados.length === 1 ? "participante" : "participantes"}.
+            </p>
+
+            <p className="field-label">Quem é você nessa conversa? (fica do lado direito)</p>
+            <select value={voce} onChange={(e) => setVoce(e.target.value)} className="field-input mb-3">
+              {participantesDetectados.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+
+            <p className="mb-2 text-xs text-muted">Prévia:</p>
+            <div className="mb-3 max-h-80 overflow-y-auto rounded-sm border border-border bg-base p-3">
+              <ConversaBolhas
+                mensagens={mensagensParaSalvar}
+                participanteVoce={voce}
+                tipo={tipo}
+                participantes={participantesDetectados}
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <button onClick={cancelarPreVisualizacao} className="btn-secondary flex-1" disabled={salvando}>
+                Cancelar
+              </button>
+              <button onClick={salvar} className="btn-primary flex-1" disabled={salvando}>
+                {salvando ? "Salvando..." : "Salvar conversa"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {erro && <p className="mt-3 text-xs text-rust">{erro}</p>}
+      </div>
+
+      <p className="mb-2 text-xs text-muted">
+        {conversas.length === 0 ? "Nenhuma conversa de exemplo criada ainda." : `${conversas.length} conversa${conversas.length > 1 ? "s" : ""} criada${conversas.length > 1 ? "s" : ""}.`}
+      </p>
+      <div className="flex flex-col gap-2">
+        {conversas.map((c) => (
+          <div key={c.id} className="rounded-sm border border-border bg-surface p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <p className="truncate text-sm text-ink">{c.titulo}</p>
+                  <span className="shrink-0 rounded-sm border border-border px-1.5 py-0.5 text-[10px] text-muted">
+                    {c.tipo === "grupo" ? "Grupo" : "Normal"}
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted">{c.total_mensagens} mensagens</p>
+              </div>
+              <div className="flex shrink-0 gap-2">
+                <button onClick={() => verConversa(c)} className="rounded-sm border border-border px-2 py-1 text-xs text-ink">
+                  {abertaId === c.id ? "Ocultar" : "Ver"}
+                </button>
+                <button onClick={() => excluir(c)} className="text-muted hover:text-rust">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+            {abertaId === c.id && (
+              <div className="mt-3 max-h-96 overflow-y-auto rounded-sm border border-border bg-base p-3">
+                {carregandoId === c.id ? (
+                  <p className="text-sm text-muted">Carregando...</p>
+                ) : (
+                  <ConversaBolhas
+                    mensagens={mensagensPorConversa[c.id] || []}
+                    participanteVoce={c.participante_voce}
+                    tipo={c.tipo}
+                    participantes={c.participantes || []}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
