@@ -601,3 +601,22 @@ alter table public.conversas_demo add column if not exists liberacao_quantidade_
 -- balãozinho de mensagens não vistas na lista, sem precisar abrir cada
 -- conversa antes.
 alter table public.conversas_demo_progresso add column if not exists mensagens_lidas integer not null default 0;
+
+-- ============================================================
+-- ORDEM DE EXIBIÇÃO DAS CONVERSAS DE EXEMPLO (o admin reordena na mão,
+-- com as setinhas, em vez de ficar sempre na ordem de criação)
+-- ============================================================
+
+alter table public.conversas_demo add column if not exists ordem_exibicao integer;
+
+-- Preenche a ordem das conversas que já existem, mantendo a ordem
+-- atual (mais recente primeiro) até o admin reordenar na mão.
+with numeradas as (
+  select id, row_number() over (order by criado_em desc) as rn
+  from public.conversas_demo
+  where ordem_exibicao is null
+)
+update public.conversas_demo c
+set ordem_exibicao = n.rn
+from numeradas n
+where c.id = n.id;

@@ -20,7 +20,11 @@ export default async function ConversasPage() {
       .eq("user_id", user.id)
       .order("criado_em", { ascending: false }),
     supabase.from("conteudo_video_conversas").select("*").order("criado_em", { ascending: false }).limit(1),
-    supabase.from("conversas_demo").select("*").order("criado_em", { ascending: false }),
+    supabase
+      .from("conversas_demo")
+      .select("*")
+      .order("ordem_exibicao", { ascending: true, nullsFirst: false })
+      .order("criado_em", { ascending: false }),
   ]);
 
   const video = videos?.[0];
