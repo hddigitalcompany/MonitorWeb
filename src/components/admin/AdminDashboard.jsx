@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Trash2, Upload, Send, ArrowLeft } from "lucide-react";
+import { Trash2, Upload, Send, ArrowLeft, Pencil } from "lucide-react";
 import { extrairIdYoutube } from "@/lib/youtube";
 import { TEXTOS_PADRAO } from "@/lib/textos";
 import { calcularEtapaReembolso } from "@/lib/reembolso";
@@ -1169,7 +1169,26 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
   const [abertaId, setAbertaId] = useState(null);
   const [mensagensPorConversa, setMensagensPorConversa] = useState({});
   const [carregandoId, setCarregandoId] = useState(null);
+  const [editandoId, setEditandoId] = useState(null);
+  const [edicaoTitulo, setEdicaoTitulo] = useState("");
+  const [edicaoVoce, setEdicaoVoce] = useState("");
   const supabase = createClient();
+
+  // Cada vez que essa aba é aberta, o componente monta de novo (o painel
+  // só existe enquanto a aba está selecionada) — por isso busca a lista
+  // atualizada aqui, em vez de confiar só no que veio do carregamento
+  // inicial da página, que fica desatualizado assim que você cria uma
+  // conversa nova e troca de aba.
+  useEffect(() => {
+    supabase
+      .from("conversas_demo")
+      .select("*")
+      .order("criado_em", { ascending: false })
+      .then(({ data }) => {
+        if (data) setConversas(data);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function mudarTipo(novoTipo) {
     setTipo(novoTipo);
@@ -1310,6 +1329,29 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
     await supabase.from("conversas_demo").delete().eq("id", conversa.id);
     setConversas(conversas.filter((c) => c.id !== conversa.id));
     if (abertaId === conversa.id) setAbertaId(null);
+  }
+
+  function iniciarEdicao(conversa) {
+    setEditandoId(conversa.id);
+    setEdicaoTitulo(conversa.titulo);
+    setEdicaoVoce(conversa.participante_voce || "");
+  }
+
+  function cancelarEdicao() {
+    setEditandoId(null);
+  }
+
+  async function salvarEdicao(conversa) {
+    const { data, error } = await supabase
+      .from("conversas_demo")
+      .update({ titulo: edicaoTitulo.trim() || conversa.titulo, participante_voce: edicaoVoce })
+      .eq("id", conversa.id)
+      .select()
+      .single();
+    if (!error && data) {
+      setConversas(conversas.map((c) => (c.id === conversa.id ? data : c)));
+      setEditandoId(null);
+    }
   }
 
   const compondoManualmente = modoManual && nomeOutraPessoa;
@@ -1467,26 +1509,60 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
       <div className="flex flex-col gap-2">
         {conversas.map((c) => (
           <div key={c.id} className="rounded-sm border border-border bg-surface p-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <p className="truncate text-sm text-ink">{c.titulo}</p>
-                  <span className="shrink-0 rounded-sm border border-border px-1.5 py-0.5 text-[10px] text-muted">
-                    {c.tipo === "grupo" ? "Grupo" : "Normal"}
-                  </span>
+            {editandoId === c.id ? (
+              <div>
+                <p className="field-label">Título</p>
+                <input
+                  value={edicaoTitulo}
+                  onChange={(e) => setEdicaoTitulo(e.target.value)}
+                  className="field-input mb-3"
+                />
+                <p className="field-label">Quem é você nessa conversa?</p>
+                <select
+                  value={edicaoVoce}
+                  onChange={(e) => setEdicaoVoce(e.target.value)}
+                  className="field-input mb-3"
+                >
+                  {(c.participantes || []).map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex gap-2">
+                  <button onClick={cancelarEdicao} className="btn-secondary flex-1">
+                    Cancelar
+                  </button>
+                  <button onClick={() => salvarEdicao(c)} className="btn-primary flex-1">
+                    Salvar
+                  </button>
                 </div>
-                <p className="text-[11px] text-muted">{c.total_mensagens} mensagens</p>
               </div>
-              <div className="flex shrink-0 gap-2">
-                <button onClick={() => verConversa(c)} className="rounded-sm border border-border px-2 py-1 text-xs text-ink">
-                  {abertaId === c.id ? "Ocultar" : "Ver"}
-                </button>
-                <button onClick={() => excluir(c)} className="text-muted hover:text-rust">
-                  <Trash2 size={14} />
-                </button>
+            ) : (
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <p className="truncate text-sm text-ink">{c.titulo}</p>
+                    <span className="shrink-0 rounded-sm border border-border px-1.5 py-0.5 text-[10px] text-muted">
+                      {c.tipo === "grupo" ? "Grupo" : "Normal"}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted">{c.total_mensagens} mensagens · você é {c.participante_voce}</p>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <button onClick={() => verConversa(c)} className="rounded-sm border border-border px-2 py-1 text-xs text-ink">
+                    {abertaId === c.id ? "Ocultar" : "Ver"}
+                  </button>
+                  <button onClick={() => iniciarEdicao(c)} className="text-muted hover:text-ink">
+                    <Pencil size={14} />
+                  </button>
+                  <button onClick={() => excluir(c)} className="text-muted hover:text-rust">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
-            </div>
-            {abertaId === c.id && (
+            )}
+            {abertaId === c.id && editandoId !== c.id && (
               <div className="mt-3 max-h-96 overflow-y-auto rounded-sm border border-border bg-base p-3">
                 {carregandoId === c.id ? (
                   <p className="text-sm text-muted">Carregando...</p>
