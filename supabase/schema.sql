@@ -435,3 +435,8 @@ create policy "Lê mensagens da conversa base ou as próprias"
 create policy "Usuário escreve sua própria resposta"
   on public.mensagens_demo for insert
   with check (auth.uid() = user_id);
+
+-- Foto de perfil pra conversa de exemplo (grupo ou normal) — aparece no
+-- lugar do ícone padrão, tanto na lista do admin quanto na do cliente.
+alter table public.conversas_demo add column if not exists foto_url text;
+alter table public.conversas_demo add column if not exists foto_caminho text;

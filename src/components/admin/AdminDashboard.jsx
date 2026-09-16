@@ -17,6 +17,7 @@ import {
   BookUser,
   Headset,
   MessageCircle,
+  Users,
   CreditCard,
   LogIn,
   ChevronDown,
@@ -1285,6 +1286,10 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
   const [editandoId, setEditandoId] = useState(null);
   const [edicaoTitulo, setEdicaoTitulo] = useState("");
   const [edicaoVoce, setEdicaoVoce] = useState("");
+  const [fotoArquivo, setFotoArquivo] = useState(null);
+  const [fotoPreview, setFotoPreview] = useState(null);
+  const [edicaoFotoArquivo, setEdicaoFotoArquivo] = useState(null);
+  const [edicaoFotoPreview, setEdicaoFotoPreview] = useState(null);
   const supabase = createClient();
 
   // Cada vez que essa aba é aberta, o componente monta de novo (o painel
@@ -1318,6 +1323,26 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
     setRemetenteAtual("Você");
     setTextoAtual("");
     setErro("");
+    setFotoArquivo(null);
+    setFotoPreview(null);
+  }
+
+  function escolherFoto(e) {
+    const arquivo = e.target.files?.[0];
+    if (!arquivo) return;
+    setFotoArquivo(arquivo);
+    const leitor = new FileReader();
+    leitor.onload = () => setFotoPreview(leitor.result);
+    leitor.readAsDataURL(arquivo);
+  }
+
+  function escolherFotoEdicao(e) {
+    const arquivo = e.target.files?.[0];
+    if (!arquivo) return;
+    setEdicaoFotoArquivo(arquivo);
+    const leitor = new FileReader();
+    leitor.onload = () => setEdicaoFotoPreview(leitor.result);
+    leitor.readAsDataURL(arquivo);
   }
 
   function lerArquivo(e) {
@@ -1382,6 +1407,18 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
     setSalvando(true);
     setErro("");
 
+    let fotoUrl = null;
+    let fotoCaminho = null;
+    if (fotoArquivo) {
+      const caminho = `conversas-fotos/${Date.now()}-${fotoArquivo.name}`;
+      const { error: erroFoto } = await supabase.storage.from("conteudo").upload(caminho, fotoArquivo);
+      if (!erroFoto) {
+        const { data: { publicUrl } } = supabase.storage.from("conteudo").getPublicUrl(caminho);
+        fotoUrl = publicUrl;
+        fotoCaminho = caminho;
+      }
+    }
+
     const { data: conversa, error: erroConversa } = await supabase
       .from("conversas_demo")
       .insert({
@@ -1390,6 +1427,8 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
         participante_voce: voce,
         participantes: participantesDetectados,
         total_mensagens: mensagensParaSalvar.length,
+        foto_url: fotoUrl,
+        foto_caminho: fotoCaminho,
       })
       .select()
       .single();
@@ -1439,6 +1478,9 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
   }
 
   async function excluir(conversa) {
+    if (conversa.foto_caminho) {
+      await supabase.storage.from("conteudo").remove([conversa.foto_caminho]);
+    }
     await supabase.from("conversas_demo").delete().eq("id", conversa.id);
     setConversas(conversas.filter((c) => c.id !== conversa.id));
     if (abertaId === conversa.id) setAbertaId(null);
@@ -1448,22 +1490,47 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
     setEditandoId(conversa.id);
     setEdicaoTitulo(conversa.titulo);
     setEdicaoVoce(conversa.participante_voce || "");
+    setEdicaoFotoArquivo(null);
+    setEdicaoFotoPreview(conversa.foto_url || null);
   }
 
   function cancelarEdicao() {
     setEditandoId(null);
+    setEdicaoFotoArquivo(null);
+    setEdicaoFotoPreview(null);
   }
 
   async function salvarEdicao(conversa) {
+    let fotoUrl = conversa.foto_url || null;
+    let fotoCaminho = conversa.foto_caminho || null;
+    if (edicaoFotoArquivo) {
+      const caminho = `conversas-fotos/${Date.now()}-${edicaoFotoArquivo.name}`;
+      const { error: erroFoto } = await supabase.storage.from("conteudo").upload(caminho, edicaoFotoArquivo);
+      if (!erroFoto) {
+        if (conversa.foto_caminho) {
+          await supabase.storage.from("conteudo").remove([conversa.foto_caminho]);
+        }
+        const { data: { publicUrl } } = supabase.storage.from("conteudo").getPublicUrl(caminho);
+        fotoUrl = publicUrl;
+        fotoCaminho = caminho;
+      }
+    }
     const { data, error } = await supabase
       .from("conversas_demo")
-      .update({ titulo: edicaoTitulo.trim() || conversa.titulo, participante_voce: edicaoVoce })
+      .update({
+        titulo: edicaoTitulo.trim() || conversa.titulo,
+        participante_voce: edicaoVoce,
+        foto_url: fotoUrl,
+        foto_caminho: fotoCaminho,
+      })
       .eq("id", conversa.id)
       .select()
       .single();
     if (!error && data) {
       setConversas(conversas.map((c) => (c.id === conversa.id ? data : c)));
       setEditandoId(null);
+      setEdicaoFotoArquivo(null);
+      setEdicaoFotoPreview(null);
     }
   }
 
@@ -1494,6 +1561,21 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
           placeholder="Ex: Maria, ou Grupo da Família"
           className="field-input mb-3"
         />
+
+        <p className="field-label">Foto (opcional)</p>
+        <div className="mb-3 flex items-center gap-3">
+          {fotoPreview ? (
+            <img src={fotoPreview} alt="" className="h-12 w-12 rounded-full object-cover" />
+          ) : (
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber/20 text-ink">
+              {tipo === "grupo" ? <Users size={18} /> : <MessageCircle size={18} />}
+            </div>
+          )}
+          <label className="btn-secondary cursor-pointer text-xs">
+            Escolher foto
+            <input type="file" accept="image/*" onChange={escolherFoto} className="hidden" />
+          </label>
+        </div>
 
         {!mensagensParaSalvar && !modoManual && (
           <div className={tipo === "normal" ? "flex gap-2" : ""}>
@@ -1593,7 +1675,12 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
             )}
 
             <p className="mb-2 text-xs text-muted">Prévia:</p>
-            <div className="mb-3 max-h-80 overflow-y-auto rounded-sm border border-border bg-base p-3">
+            <div
+              ref={(el) => {
+                if (el) el.scrollTop = el.scrollHeight;
+              }}
+              className="mb-3 max-h-80 overflow-y-auto rounded-sm border border-border bg-base p-3"
+            >
               <ConversaBolhas
                 mensagens={mensagensParaSalvar}
                 participanteVoce={voce}
@@ -1642,6 +1729,20 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
                     </option>
                   ))}
                 </select>
+                <p className="field-label">Foto</p>
+                <div className="mb-3 flex items-center gap-3">
+                  {edicaoFotoPreview ? (
+                    <img src={edicaoFotoPreview} alt="" className="h-12 w-12 rounded-full object-cover" />
+                  ) : (
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber/20 text-ink">
+                      {c.tipo === "grupo" ? <Users size={18} /> : <MessageCircle size={18} />}
+                    </div>
+                  )}
+                  <label className="btn-secondary cursor-pointer text-xs">
+                    Trocar foto
+                    <input type="file" accept="image/*" onChange={escolherFotoEdicao} className="hidden" />
+                  </label>
+                </div>
                 <div className="flex gap-2">
                   <button onClick={cancelarEdicao} className="btn-secondary flex-1">
                     Cancelar
@@ -1653,14 +1754,25 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
               </div>
             ) : (
               <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <p className="truncate text-sm text-ink">{c.titulo}</p>
-                    <span className="shrink-0 rounded-sm border border-border px-1.5 py-0.5 text-[10px] text-muted">
-                      {c.tipo === "grupo" ? "Grupo" : "Normal"}
-                    </span>
+                <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-amber/20 text-ink">
+                    {c.foto_url ? (
+                      <img src={c.foto_url} alt="" className="h-full w-full object-cover" />
+                    ) : c.tipo === "grupo" ? (
+                      <Users size={16} />
+                    ) : (
+                      <MessageCircle size={16} />
+                    )}
                   </div>
-                  <p className="text-[11px] text-muted">{c.total_mensagens} mensagens · você é {c.participante_voce}</p>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <p className="truncate text-sm text-ink">{c.titulo}</p>
+                      <span className="shrink-0 rounded-sm border border-border px-1.5 py-0.5 text-[10px] text-muted">
+                        {c.tipo === "grupo" ? "Grupo" : "Normal"}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted">{c.total_mensagens} mensagens · você é {c.participante_voce}</p>
+                  </div>
                 </div>
                 <div className="flex shrink-0 gap-2">
                   <button onClick={() => verConversa(c)} className="rounded-sm border border-border px-2 py-1 text-xs text-ink">
@@ -1676,7 +1788,12 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
               </div>
             )}
             {abertaId === c.id && editandoId !== c.id && (
-              <div className="mt-3 max-h-96 overflow-y-auto rounded-sm border border-border bg-base p-3">
+              <div
+                ref={(el) => {
+                  if (el) el.scrollTop = el.scrollHeight;
+                }}
+                className="mt-3 max-h-96 overflow-y-auto rounded-sm border border-border bg-base p-3"
+              >
                 {carregandoId === c.id ? (
                   <p className="text-sm text-muted">Carregando...</p>
                 ) : (

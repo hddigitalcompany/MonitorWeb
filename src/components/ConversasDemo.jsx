@@ -83,8 +83,14 @@ export default function ConversasDemo({ conversas, userId }) {
         {conversas.map((c) => (
           <div key={c.id} className="rounded-sm border border-border bg-surface p-3">
             <button onClick={() => abrir(c)} className="flex w-full items-center gap-2.5 text-left">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber/20 text-ink">
-                {c.tipo === "grupo" ? <Users size={16} /> : <MessageCircle size={16} />}
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-amber/20 text-ink">
+                {c.foto_url ? (
+                  <img src={c.foto_url} alt="" className="h-full w-full object-cover" />
+                ) : c.tipo === "grupo" ? (
+                  <Users size={16} />
+                ) : (
+                  <MessageCircle size={16} />
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm text-ink">{c.titulo}</p>
@@ -93,7 +99,12 @@ export default function ConversasDemo({ conversas, userId }) {
             </button>
             {abertaId === c.id && (
               <div className="mt-3">
-                <div className="mb-2 max-h-96 overflow-y-auto rounded-sm border border-border bg-base p-3">
+                <div
+                  ref={(el) => {
+                    if (el) el.scrollTop = el.scrollHeight;
+                  }}
+                  className="mb-2 max-h-96 overflow-y-auto rounded-sm border border-border bg-base p-3"
+                >
                   {carregandoId === c.id ? (
                     <p className="text-sm text-muted">Carregando...</p>
                   ) : (
