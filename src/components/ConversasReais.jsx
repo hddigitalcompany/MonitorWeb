@@ -43,7 +43,7 @@ export default function ConversasReais({ userId, textos }) {
 
     if (erroMinhas) {
       console.error("[conversas_reais] erro ao buscar minhas conversas:", erroMinhas.message);
-      setErro("Não deu pra carregar suas conversas agora. Tente atualizar a página.");
+      setErro(`Não deu pra carregar suas conversas agora (${erroMinhas.code || "?"}: ${erroMinhas.message}).`);
     }
 
     const idsConversas = (minhas || []).map((p) => p.conversa_id);
@@ -140,7 +140,7 @@ export default function ConversasReais({ userId, textos }) {
     const { error: erroConversa } = await supabase.from("conversas_reais").insert({ id: novoId });
     if (erroConversa) {
       console.error("[conversas_reais] erro ao criar conversa:", erroConversa.message);
-      setErro("Não deu pra iniciar a conversa agora. Tente de novo em instantes.");
+      setErro(`Não deu pra iniciar a conversa (${erroConversa.code || "?"}: ${erroConversa.message}).`);
       return;
     }
 
@@ -149,7 +149,7 @@ export default function ConversasReais({ userId, textos }) {
       .insert({ conversa_id: novoId, user_id: userId });
     if (erroEu) {
       console.error("[conversas_reais] erro ao entrar na própria conversa:", erroEu.message);
-      setErro("Não deu pra iniciar a conversa agora. Tente de novo em instantes.");
+      setErro(`Não deu pra iniciar a conversa (${erroEu.code || "?"}: ${erroEu.message}).`);
       return;
     }
 
@@ -159,7 +159,7 @@ export default function ConversasReais({ userId, textos }) {
         .insert({ conversa_id: novoId, user_id: idPessoa });
       if (erroOutro) {
         console.error("[conversas_reais] erro ao adicionar participante:", erroOutro.message);
-        setErro("A conversa foi criada, mas não deu pra adicionar todo mundo. Tente de novo.");
+        setErro(`A conversa foi criada, mas não deu pra adicionar todo mundo (${erroOutro.code || "?"}: ${erroOutro.message}).`);
       }
     }
 
@@ -232,7 +232,7 @@ export default function ConversasReais({ userId, textos }) {
 
     if (error) {
       console.error("[conversas_reais] erro ao enviar mensagem:", error.message);
-      setErro("Não deu pra enviar essa mensagem. Tente de novo.");
+      setErro(`Não deu pra enviar essa mensagem (${error.code || "?"}: ${error.message}).`);
     } else if (nova) {
       setMensagens((atual) => (atual.some((m) => m.id === nova.id) ? atual : [...atual, nova]));
       const agora = new Date().toISOString();
