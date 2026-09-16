@@ -419,3 +419,19 @@ create policy "Só admin escreve"
   on public.mensagens_demo for all
   using (exists (select 1 from public.admins where user_id = auth.uid()))
   with check (exists (select 1 from public.admins where user_id = auth.uid()));
+
+-- Dá pra pessoa responder dentro de uma conversa de exemplo (continuando
+-- como se fosse ela escrevendo) — essas mensagens são só dela, não
+-- aparecem pros outros clientes que abrirem a mesma conversa.
+alter table public.mensagens_demo add column if not exists user_id uuid references auth.users(id) on delete cascade;
+alter table public.mensagens_demo alter column ordem drop not null;
+
+drop policy if exists "Leitura livre para logados" on public.mensagens_demo;
+
+create policy "Lê mensagens da conversa base ou as próprias"
+  on public.mensagens_demo for select
+  using (user_id is null or auth.uid() = user_id);
+
+create policy "Usuário escreve sua própria resposta"
+  on public.mensagens_demo for insert
+  with check (auth.uid() = user_id);

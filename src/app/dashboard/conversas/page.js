@@ -51,7 +51,7 @@ export default async function ConversasPage() {
         </div>
       )}
 
-      <ConversasDemo conversas={conversasDemo || []} />
+      <ConversasDemo conversas={conversasDemo || []} userId={user.id} />
 
       <ImportarConversas conversasIniciais={conversas || []} userId={user.id} />
     </div>
