@@ -1161,10 +1161,32 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
   const [mensagensParaSalvar, setMensagensParaSalvar] = useState(null);
   const [participantesDetectados, setParticipantesDetectados] = useState([]);
   const [voce, setVoce] = useState("");
+  const [modoManual, setModoManual] = useState(false);
+  const [nomeOutraPessoa, setNomeOutraPessoa] = useState("");
+  const [rascunhoNomeOutraPessoa, setRascunhoNomeOutraPessoa] = useState("");
+  const [remetenteAtual, setRemetenteAtual] = useState("Você");
+  const [textoAtual, setTextoAtual] = useState("");
   const [abertaId, setAbertaId] = useState(null);
   const [mensagensPorConversa, setMensagensPorConversa] = useState({});
   const [carregandoId, setCarregandoId] = useState(null);
   const supabase = createClient();
+
+  function mudarTipo(novoTipo) {
+    setTipo(novoTipo);
+    limparRascunho();
+  }
+
+  function limparRascunho() {
+    setMensagensParaSalvar(null);
+    setParticipantesDetectados([]);
+    setVoce("");
+    setModoManual(false);
+    setNomeOutraPessoa("");
+    setRascunhoNomeOutraPessoa("");
+    setRemetenteAtual("Você");
+    setTextoAtual("");
+    setErro("");
+  }
 
   function lerArquivo(e) {
     const arquivo = e.target.files?.[0];
@@ -1193,8 +1215,38 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
     });
   }
 
+  function iniciarModoManual() {
+    setErro("");
+    if (!titulo.trim()) {
+      setErro("Dê um título (nome do contato) antes de escrever as mensagens.");
+      return;
+    }
+    setModoManual(true);
+  }
+
+  function confirmarNomeOutraPessoa() {
+    const nome = rascunhoNomeOutraPessoa.trim();
+    if (!nome) return;
+    setNomeOutraPessoa(nome);
+    setParticipantesDetectados(["Você", nome]);
+    setVoce("Você");
+    setRemetenteAtual("Você");
+    setMensagensParaSalvar([]);
+  }
+
+  function adicionarMensagemManual() {
+    const texto = textoAtual.trim();
+    if (!texto) return;
+    setMensagensParaSalvar((atual) => [...(atual || []), { remetente: remetenteAtual, texto, dataHoraIso: null }]);
+    setTextoAtual("");
+  }
+
+  function removerUltimaMensagemManual() {
+    setMensagensParaSalvar((atual) => (atual || []).slice(0, -1));
+  }
+
   async function salvar() {
-    if (!mensagensParaSalvar || !titulo.trim()) return;
+    if (!mensagensParaSalvar || mensagensParaSalvar.length === 0 || !titulo.trim()) return;
     setSalvando(true);
     setErro("");
 
@@ -1232,17 +1284,8 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
     setConversas([conversa, ...conversas]);
     setMensagensPorConversa((atual) => ({ ...atual, [conversa.id]: mensagensParaSalvar }));
     setTitulo("");
-    setMensagensParaSalvar(null);
-    setParticipantesDetectados([]);
-    setVoce("");
+    limparRascunho();
     setSalvando(false);
-  }
-
-  function cancelarPreVisualizacao() {
-    setMensagensParaSalvar(null);
-    setParticipantesDetectados([]);
-    setVoce("");
-    setErro("");
   }
 
   async function verConversa(conversa) {
@@ -1269,16 +1312,19 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
     if (abertaId === conversa.id) setAbertaId(null);
   }
 
+  const compondoManualmente = modoManual && nomeOutraPessoa;
+
   return (
     <div>
       <div className="mb-4 rounded-sm border border-olive/40 bg-olive/10 px-3 py-2.5 text-xs text-muted">
-        Sobe um .txt exportado de uma conversa do WhatsApp (grupo ou normal). O sistema separa as
+        Sobe um .txt exportado de uma conversa do WhatsApp (grupo ou normal), ou — só em conversa
+        normal, de 2 pessoas — escreve as mensagens uma por uma na mão. O sistema separa as
         mensagens sozinho e a conversa aparece pros clientes verem como fica.
       </div>
 
       <div className="card mb-6">
         <p className="field-label">Tipo</p>
-        <select value={tipo} onChange={(e) => setTipo(e.target.value)} className="field-input mb-3">
+        <select value={tipo} onChange={(e) => mudarTipo(e.target.value)} className="field-input mb-3">
           {TIPOS_CONVERSA_DEMO.map((t) => (
             <option key={t.id} value={t.id}>
               {t.label}
@@ -1294,26 +1340,102 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
           className="field-input mb-3"
         />
 
-        {!mensagensParaSalvar ? (
-          <label className="btn-primary block cursor-pointer text-center">
-            {analisando ? "Lendo arquivo..." : "Escolher arquivo .txt"}
-            <input type="file" accept=".txt" onChange={lerArquivo} disabled={analisando} className="hidden" />
-          </label>
-        ) : (
+        {!mensagensParaSalvar && !modoManual && (
+          <div className={tipo === "normal" ? "flex gap-2" : ""}>
+            <label className="btn-primary block flex-1 cursor-pointer text-center">
+              {analisando ? "Lendo arquivo..." : "Escolher arquivo .txt"}
+              <input type="file" accept=".txt" onChange={lerArquivo} disabled={analisando} className="hidden" />
+            </label>
+            {tipo === "normal" && (
+              <button onClick={iniciarModoManual} className="btn-secondary flex-1">
+                Escrever mensagem por mensagem
+              </button>
+            )}
+          </div>
+        )}
+
+        {modoManual && !nomeOutraPessoa && (
+          <div>
+            <p className="field-label">Nome da outra pessoa (quem vai aparecer do lado esquerdo)</p>
+            <input
+              autoFocus
+              value={rascunhoNomeOutraPessoa}
+              onChange={(e) => setRascunhoNomeOutraPessoa(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && confirmarNomeOutraPessoa()}
+              placeholder="Ex: Maria"
+              className="field-input mb-3"
+            />
+            <div className="flex gap-2">
+              <button onClick={limparRascunho} className="btn-secondary flex-1">
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarNomeOutraPessoa}
+                disabled={!rascunhoNomeOutraPessoa.trim()}
+                className="btn-primary flex-1"
+              >
+                Continuar
+              </button>
+            </div>
+          </div>
+        )}
+
+        {compondoManualmente && (
+          <div className="mb-3">
+            <p className="field-label">Quem está escrevendo?</p>
+            <div className="mb-2 flex gap-2">
+              {["Você", nomeOutraPessoa].map((nome) => (
+                <button
+                  key={nome}
+                  onClick={() => setRemetenteAtual(nome)}
+                  className={`flex-1 rounded-sm border px-2 py-1.5 text-xs ${
+                    remetenteAtual === nome ? "border-amber bg-amber text-ink" : "border-border text-muted"
+                  }`}
+                >
+                  {nome}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                autoFocus
+                value={textoAtual}
+                onChange={(e) => setTextoAtual(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && adicionarMensagemManual()}
+                placeholder="Mensagem"
+                className="field-input"
+              />
+              <button onClick={adicionarMensagemManual} disabled={!textoAtual.trim()} className="btn-primary shrink-0 px-3">
+                Adicionar
+              </button>
+            </div>
+            {mensagensParaSalvar?.length > 0 && (
+              <button onClick={removerUltimaMensagemManual} className="mt-2 text-xs text-muted underline">
+                Remover última mensagem
+              </button>
+            )}
+          </div>
+        )}
+
+        {mensagensParaSalvar && mensagensParaSalvar.length > 0 && (
           <div>
             <p className="mb-2 text-xs text-muted">
-              {mensagensParaSalvar.length} mensagens encontradas, de {participantesDetectados.length}{" "}
-              {participantesDetectados.length === 1 ? "participante" : "participantes"}.
+              {mensagensParaSalvar.length} mensagens {modoManual ? "adicionadas" : "encontradas"}, de{" "}
+              {participantesDetectados.length} {participantesDetectados.length === 1 ? "participante" : "participantes"}.
             </p>
 
-            <p className="field-label">Quem é você nessa conversa? (fica do lado direito)</p>
-            <select value={voce} onChange={(e) => setVoce(e.target.value)} className="field-input mb-3">
-              {participantesDetectados.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
+            {!modoManual && (
+              <>
+                <p className="field-label">Quem é você nessa conversa? (fica do lado direito)</p>
+                <select value={voce} onChange={(e) => setVoce(e.target.value)} className="field-input mb-3">
+                  {participantesDetectados.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
 
             <p className="mb-2 text-xs text-muted">Prévia:</p>
             <div className="mb-3 max-h-80 overflow-y-auto rounded-sm border border-border bg-base p-3">
@@ -1326,7 +1448,7 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
             </div>
 
             <div className="flex gap-2">
-              <button onClick={cancelarPreVisualizacao} className="btn-secondary flex-1" disabled={salvando}>
+              <button onClick={limparRascunho} className="btn-secondary flex-1" disabled={salvando}>
                 Cancelar
               </button>
               <button onClick={salvar} className="btn-primary flex-1" disabled={salvando}>
