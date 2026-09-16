@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { MessageCircle, Users, Send } from "lucide-react";
 import ConversaBolhas from "@/components/ConversaBolhas";
@@ -19,7 +19,19 @@ export default function ConversasDemo({ conversas, userId }) {
   const [carregandoId, setCarregandoId] = useState(null);
   const [rascunho, setRascunho] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [aberturaPorConversa, setAberturaPorConversa] = useState({});
+  const [, forcarAtualizacao] = useState(0);
   const supabase = createClient();
+
+  // Enquanto tiver uma conversa com liberação gradual aberta, atualiza a
+  // tela de tempos em tempos pra novas mensagens antigas irem aparecendo
+  // sozinhas, sem precisar fechar e abrir a conversa de novo.
+  useEffect(() => {
+    const conversaAberta = conversas.find((c) => c.id === abertaId);
+    if (!conversaAberta?.liberacao_intervalo_minutos) return;
+    const id = setInterval(() => forcarAtualizacao((t) => t + 1), 30000);
+    return () => clearInterval(id);
+  }, [abertaId, conversas]);
 
   async function abrir(conversa) {
     if (abertaId === conversa.id) {
@@ -28,6 +40,25 @@ export default function ConversasDemo({ conversas, userId }) {
     }
     setAbertaId(conversa.id);
     setRascunho("");
+
+    if (conversa.liberacao_intervalo_minutos && !aberturaPorConversa[conversa.id]) {
+      const { data: progresso } = await supabase
+        .from("conversas_demo_progresso")
+        .select("primeira_abertura")
+        .eq("conversa_id", conversa.id)
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      let primeiraAbertura = progresso?.primeira_abertura;
+      if (!primeiraAbertura) {
+        primeiraAbertura = new Date().toISOString();
+        await supabase
+          .from("conversas_demo_progresso")
+          .insert({ conversa_id: conversa.id, user_id: userId, primeira_abertura: primeiraAbertura });
+      }
+      setAberturaPorConversa((atual) => ({ ...atual, [conversa.id]: primeiraAbertura }));
+    }
+
     if (mensagensPorConversa[conversa.id]) return;
 
     setCarregandoId(conversa.id);
@@ -42,6 +73,25 @@ export default function ConversasDemo({ conversas, userId }) {
       [conversa.id]: (data || []).map((m) => ({ ...m, dataHoraIso: m.enviado_em })),
     }));
     setCarregandoId(null);
+  }
+
+  // Se a conversa tiver liberação gradual, mostra só uma parte das
+  // mensagens do roteiro (as que não foram escritas pelo próprio
+  // cliente), liberando uma a mais a cada N minutos desde a primeira
+  // vez que a pessoa abriu essa conversa. As mensagens que a própria
+  // pessoa escreveu continuando a conversa sempre aparecem.
+  function mensagensVisiveis(conversa) {
+    const todas = mensagensPorConversa[conversa.id] || [];
+    const intervalo = conversa.liberacao_intervalo_minutos;
+    const abertura = aberturaPorConversa[conversa.id];
+    if (!intervalo || intervalo <= 0 || !abertura) return { visiveis: todas, faltam: 0 };
+
+    const doRoteiro = todas.filter((m) => m.user_id == null);
+    const proprias = todas.filter((m) => m.user_id != null);
+    const minutosPassados = (Date.now() - new Date(abertura).getTime()) / 60000;
+    const quantidade = Math.min(doRoteiro.length, 1 + Math.floor(minutosPassados / intervalo));
+
+    return { visiveis: [...doRoteiro.slice(0, quantidade), ...proprias], faltam: doRoteiro.length - quantidade };
   }
 
   async function enviar(conversa) {
@@ -109,13 +159,17 @@ export default function ConversasDemo({ conversas, userId }) {
                     <p className="text-sm text-muted">Carregando...</p>
                   ) : (
                     <ConversaBolhas
-                      mensagens={mensagensPorConversa[c.id] || []}
+                      mensagens={mensagensVisiveis(c).visiveis}
                       participanteVoce={c.participante_voce}
                       tipo={c.tipo}
                       participantes={c.participantes || []}
                     />
                   )}
                 </div>
+
+                {carregandoId !== c.id && mensagensVisiveis(c).faltam > 0 && (
+                  <p className="mb-2 text-[11px] text-muted">Mensagens mais antigas ainda vão aparecer aos poucos.</p>
+                )}
 
                 <div className="mb-2 flex gap-1">
                   {EMOJIS_RAPIDOS.map((emoji) => (

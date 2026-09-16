@@ -440,3 +440,153 @@ create policy "Usuário escreve sua própria resposta"
 -- lugar do ícone padrão, tanto na lista do admin quanto na do cliente.
 alter table public.conversas_demo add column if not exists foto_url text;
 alter table public.conversas_demo add column if not exists foto_caminho text;
+
+-- ============================================================
+-- LIBERAÇÃO GRADUAL DO HISTÓRICO DE MENSAGENS (conversas de exemplo)
+-- Em vez de mostrar a conversa inteira de uma vez, as mensagens do
+-- "roteiro" (as que vieram do .txt ou foram escritas manualmente pelo
+-- admin — não as que o próprio cliente escreveu continuando a
+-- conversa) vão aparecendo aos poucos, no ritmo que o admin escolher
+-- pra cada conversa. Vazio/0 = mostra tudo de uma vez, como já era.
+-- ============================================================
+
+alter table public.conversas_demo add column if not exists liberacao_intervalo_minutos integer;
+
+-- Guarda quando cada pessoa abriu uma conversa de exemplo pela primeira
+-- vez, pra contar o tempo da liberação gradual a partir daí (cada
+-- pessoa começa a contar da própria primeira abertura, não de quando a
+-- conversa foi criada pelo admin).
+create table if not exists public.conversas_demo_progresso (
+  conversa_id uuid not null references public.conversas_demo(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  primeira_abertura timestamptz not null default now(),
+  primary key (conversa_id, user_id)
+);
+
+alter table public.conversas_demo_progresso enable row level security;
+
+create policy "Usuário vê e cria seu próprio progresso"
+  on public.conversas_demo_progresso for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- ============================================================
+-- CONVERSAS DE VERDADE ENTRE CLIENTES (a pessoa abre uma conversa
+-- nova, escolhe outras pessoas do app na lista, e troca mensagens de
+-- verdade com elas — diferente das "conversas de exemplo", que são
+-- roteiros prontos criados pelo admin.)
+-- ============================================================
+
+-- Diretório com só o nome de cada pessoa (nada sensível como telefone),
+-- pra qualquer pessoa logada poder ver a lista de gente do app na hora
+-- de abrir uma conversa nova.
+create table if not exists public.diretorio_usuarios (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  nome text not null,
+  atualizado_em timestamptz not null default now()
+);
+
+alter table public.diretorio_usuarios enable row level security;
+
+create policy "Leitura livre para logados"
+  on public.diretorio_usuarios for select
+  using (auth.role() = 'authenticated');
+
+create policy "Usuário escreve o próprio nome"
+  on public.diretorio_usuarios for insert
+  with check (auth.uid() = user_id);
+
+create policy "Usuário atualiza o próprio nome"
+  on public.diretorio_usuarios for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- Preenche o diretório com quem já tem cadastro, já que o campo nome
+-- só vai começar a ser salvo aqui a partir de agora.
+insert into public.diretorio_usuarios (user_id, nome)
+select id, coalesce(nullif(trim(raw_user_meta_data->>'full_name'), ''), nullif(trim(raw_user_meta_data->>'name'), ''), email)
+from auth.users
+on conflict (user_id) do nothing;
+
+create table if not exists public.conversas_reais (
+  id uuid primary key default gen_random_uuid(),
+  criado_em timestamptz not null default now(),
+  ultima_mensagem_em timestamptz not null default now()
+);
+
+create table if not exists public.conversas_reais_participantes (
+  conversa_id uuid not null references public.conversas_reais(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  primary key (conversa_id, user_id)
+);
+
+create table if not exists public.mensagens_reais (
+  id bigint generated always as identity primary key,
+  conversa_id uuid not null references public.conversas_reais(id) on delete cascade,
+  remetente_id uuid not null references auth.users(id) on delete cascade,
+  texto text not null,
+  criado_em timestamptz not null default now()
+);
+
+create index if not exists mensagens_reais_conversa_id_idx on public.mensagens_reais (conversa_id, criado_em);
+
+alter table public.conversas_reais enable row level security;
+alter table public.conversas_reais_participantes enable row level security;
+alter table public.mensagens_reais enable row level security;
+
+create policy "Participante vê a conversa"
+  on public.conversas_reais for select
+  using (exists (
+    select 1 from public.conversas_reais_participantes p
+    where p.conversa_id = id and p.user_id = auth.uid()
+  ));
+
+create policy "Logado cria conversa"
+  on public.conversas_reais for insert
+  with check (auth.role() = 'authenticated');
+
+create policy "Participante atualiza a conversa"
+  on public.conversas_reais for update
+  using (exists (
+    select 1 from public.conversas_reais_participantes p
+    where p.conversa_id = id and p.user_id = auth.uid()
+  ));
+
+create policy "Vê participantes das suas conversas"
+  on public.conversas_reais_participantes for select
+  using (exists (
+    select 1 from public.conversas_reais_participantes p2
+    where p2.conversa_id = conversas_reais_participantes.conversa_id and p2.user_id = auth.uid()
+  ));
+
+-- Só dá pra se adicionar (user_id = você mesmo) ou adicionar outra
+-- pessoa numa conversa em que você já participa — assim ninguém entra
+-- numa conversa alheia sem ter sido convidado por quem já tá nela.
+create policy "Entra na conversa que cria ou já participa"
+  on public.conversas_reais_participantes for insert
+  with check (
+    user_id = auth.uid()
+    or exists (
+      select 1 from public.conversas_reais_participantes p2
+      where p2.conversa_id = conversas_reais_participantes.conversa_id and p2.user_id = auth.uid()
+    )
+  );
+
+create policy "Participante lê mensagens da conversa"
+  on public.mensagens_reais for select
+  using (exists (
+    select 1 from public.conversas_reais_participantes p
+    where p.conversa_id = mensagens_reais.conversa_id and p.user_id = auth.uid()
+  ));
+
+create policy "Participante envia mensagem"
+  on public.mensagens_reais for insert
+  with check (
+    remetente_id = auth.uid()
+    and exists (
+      select 1 from public.conversas_reais_participantes p
+      where p.conversa_id = mensagens_reais.conversa_id and p.user_id = auth.uid()
+    )
+  );
+
+alter publication supabase_realtime add table public.mensagens_reais;

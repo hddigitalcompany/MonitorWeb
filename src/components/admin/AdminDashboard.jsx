@@ -1290,6 +1290,8 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
   const [fotoPreview, setFotoPreview] = useState(null);
   const [edicaoFotoArquivo, setEdicaoFotoArquivo] = useState(null);
   const [edicaoFotoPreview, setEdicaoFotoPreview] = useState(null);
+  const [liberacaoMinutos, setLiberacaoMinutos] = useState("");
+  const [edicaoLiberacaoMinutos, setEdicaoLiberacaoMinutos] = useState("");
   const supabase = createClient();
 
   // Cada vez que essa aba é aberta, o componente monta de novo (o painel
@@ -1325,6 +1327,7 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
     setErro("");
     setFotoArquivo(null);
     setFotoPreview(null);
+    setLiberacaoMinutos("");
   }
 
   function escolherFoto(e) {
@@ -1429,6 +1432,7 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
         total_mensagens: mensagensParaSalvar.length,
         foto_url: fotoUrl,
         foto_caminho: fotoCaminho,
+        liberacao_intervalo_minutos: liberacaoMinutos ? parseInt(liberacaoMinutos, 10) : null,
       })
       .select()
       .single();
@@ -1492,12 +1496,16 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
     setEdicaoVoce(conversa.participante_voce || "");
     setEdicaoFotoArquivo(null);
     setEdicaoFotoPreview(conversa.foto_url || null);
+    setEdicaoLiberacaoMinutos(
+      conversa.liberacao_intervalo_minutos != null ? String(conversa.liberacao_intervalo_minutos) : ""
+    );
   }
 
   function cancelarEdicao() {
     setEditandoId(null);
     setEdicaoFotoArquivo(null);
     setEdicaoFotoPreview(null);
+    setEdicaoLiberacaoMinutos("");
   }
 
   async function salvarEdicao(conversa) {
@@ -1522,6 +1530,7 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
         participante_voce: edicaoVoce,
         foto_url: fotoUrl,
         foto_caminho: fotoCaminho,
+        liberacao_intervalo_minutos: edicaoLiberacaoMinutos ? parseInt(edicaoLiberacaoMinutos, 10) : null,
       })
       .eq("id", conversa.id)
       .select()
@@ -1531,6 +1540,7 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
       setEditandoId(null);
       setEdicaoFotoArquivo(null);
       setEdicaoFotoPreview(null);
+      setEdicaoLiberacaoMinutos("");
     }
   }
 
@@ -1576,6 +1586,16 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
             <input type="file" accept="image/*" onChange={escolherFoto} className="hidden" />
           </label>
         </div>
+
+        <p className="field-label">Liberação gradual do histórico (opcional)</p>
+        <input
+          type="number"
+          min="0"
+          value={liberacaoMinutos}
+          onChange={(e) => setLiberacaoMinutos(e.target.value)}
+          placeholder="Minutos entre cada mensagem antiga aparecer. Vazio = mostra tudo de uma vez."
+          className="field-input mb-3"
+        />
 
         {!mensagensParaSalvar && !modoManual && (
           <div className={tipo === "normal" ? "flex gap-2" : ""}>
@@ -1743,6 +1763,15 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
                     <input type="file" accept="image/*" onChange={escolherFotoEdicao} className="hidden" />
                   </label>
                 </div>
+                <p className="field-label">Liberação gradual do histórico (opcional)</p>
+                <input
+                  type="number"
+                  min="0"
+                  value={edicaoLiberacaoMinutos}
+                  onChange={(e) => setEdicaoLiberacaoMinutos(e.target.value)}
+                  placeholder="Minutos entre cada mensagem antiga aparecer. Vazio = mostra tudo de uma vez."
+                  className="field-input mb-3"
+                />
                 <div className="flex gap-2">
                   <button onClick={cancelarEdicao} className="btn-secondary flex-1">
                     Cancelar

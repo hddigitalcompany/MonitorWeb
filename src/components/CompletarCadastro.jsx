@@ -32,6 +32,9 @@ export default function CompletarCadastro({ nomeInicial }) {
     } = await supabase.auth.getUser();
 
     await supabase.auth.updateUser({ data: { full_name: nome.trim() } });
+    await supabase
+      .from("diretorio_usuarios")
+      .upsert({ user_id: user.id, nome: nome.trim(), atualizado_em: new Date().toISOString() });
     const { error } = await supabase
       .from("perfis_usuario")
       .update({ telefone: digitos })

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/PageHeader";
 import ImportarConversas from "@/components/ImportarConversas";
 import ConversasDemo from "@/components/ConversasDemo";
+import ConversasReais from "@/components/ConversasReais";
 import { extrairIdYoutube } from "@/lib/youtube";
 import { buscarTextos, texto } from "@/lib/textos";
 
@@ -50,6 +51,8 @@ export default async function ConversasPage() {
           )}
         </div>
       )}
+
+      <ConversasReais userId={user.id} />
 
       <ConversasDemo conversas={conversasDemo || []} userId={user.id} />
 
