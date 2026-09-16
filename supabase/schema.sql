@@ -620,3 +620,14 @@ update public.conversas_demo c
 set ordem_exibicao = n.rn
 from numeradas n
 where c.id = n.id;
+
+-- ============================================================
+-- LIBERAÇÃO EM DUAS VELOCIDADES PRA CONVERSA NORMAL (2 pessoas):
+-- mensagens seguidas da mesma pessoa (rajada) liberam juntas, e o
+-- intervalo até a próxima rajada aparecer varia se ela foi enviada por
+-- "você" ou recebida da outra pessoa. Só faz sentido em conversa
+-- normal — em grupo continua usando liberacao_intervalo_minutos.
+-- ============================================================
+
+alter table public.conversas_demo add column if not exists liberacao_intervalo_enviadas_minutos integer;
+alter table public.conversas_demo add column if not exists liberacao_intervalo_recebidas_minutos integer;

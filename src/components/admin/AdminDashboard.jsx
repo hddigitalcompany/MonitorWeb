@@ -1299,8 +1299,12 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
   const [edicaoFotoArquivo, setEdicaoFotoArquivo] = useState(null);
   const [edicaoFotoPreview, setEdicaoFotoPreview] = useState(null);
   const [liberacaoMinutos, setLiberacaoMinutos] = useState("");
+  const [liberacaoEnviadas, setLiberacaoEnviadas] = useState("");
+  const [liberacaoRecebidas, setLiberacaoRecebidas] = useState("");
   const [liberacaoInicial, setLiberacaoInicial] = useState("");
   const [edicaoLiberacaoMinutos, setEdicaoLiberacaoMinutos] = useState("");
+  const [edicaoLiberacaoEnviadas, setEdicaoLiberacaoEnviadas] = useState("");
+  const [edicaoLiberacaoRecebidas, setEdicaoLiberacaoRecebidas] = useState("");
   const [edicaoLiberacaoInicial, setEdicaoLiberacaoInicial] = useState("");
   const supabase = createClient();
 
@@ -1339,6 +1343,8 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
     setFotoArquivo(null);
     setFotoPreview(null);
     setLiberacaoMinutos("");
+    setLiberacaoEnviadas("");
+    setLiberacaoRecebidas("");
     setLiberacaoInicial("");
   }
 
@@ -1446,9 +1452,14 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
         total_mensagens: mensagensParaSalvar.length,
         foto_url: fotoUrl,
         foto_caminho: fotoCaminho,
-        liberacao_intervalo_minutos: liberacaoMinutos ? parseInt(liberacaoMinutos, 10) : null,
         liberacao_quantidade_inicial: liberacaoInicial !== "" ? parseInt(liberacaoInicial, 10) : null,
         ordem_exibicao: proximaOrdem,
+        ...(tipo === "grupo"
+          ? { liberacao_intervalo_minutos: liberacaoMinutos ? parseInt(liberacaoMinutos, 10) : null }
+          : {
+              liberacao_intervalo_enviadas_minutos: liberacaoEnviadas ? parseInt(liberacaoEnviadas, 10) : null,
+              liberacao_intervalo_recebidas_minutos: liberacaoRecebidas ? parseInt(liberacaoRecebidas, 10) : null,
+            }),
       })
       .select()
       .single();
@@ -1539,6 +1550,12 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
     setEdicaoLiberacaoMinutos(
       conversa.liberacao_intervalo_minutos != null ? String(conversa.liberacao_intervalo_minutos) : ""
     );
+    setEdicaoLiberacaoEnviadas(
+      conversa.liberacao_intervalo_enviadas_minutos != null ? String(conversa.liberacao_intervalo_enviadas_minutos) : ""
+    );
+    setEdicaoLiberacaoRecebidas(
+      conversa.liberacao_intervalo_recebidas_minutos != null ? String(conversa.liberacao_intervalo_recebidas_minutos) : ""
+    );
     setEdicaoLiberacaoInicial(
       conversa.liberacao_quantidade_inicial != null ? String(conversa.liberacao_quantidade_inicial) : ""
     );
@@ -1549,6 +1566,8 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
     setEdicaoFotoArquivo(null);
     setEdicaoFotoPreview(null);
     setEdicaoLiberacaoMinutos("");
+    setEdicaoLiberacaoEnviadas("");
+    setEdicaoLiberacaoRecebidas("");
     setEdicaoLiberacaoInicial("");
   }
 
@@ -1574,8 +1593,13 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
         participante_voce: edicaoVoce,
         foto_url: fotoUrl,
         foto_caminho: fotoCaminho,
-        liberacao_intervalo_minutos: edicaoLiberacaoMinutos ? parseInt(edicaoLiberacaoMinutos, 10) : null,
         liberacao_quantidade_inicial: edicaoLiberacaoInicial !== "" ? parseInt(edicaoLiberacaoInicial, 10) : null,
+        ...(conversa.tipo === "grupo"
+          ? { liberacao_intervalo_minutos: edicaoLiberacaoMinutos ? parseInt(edicaoLiberacaoMinutos, 10) : null }
+          : {
+              liberacao_intervalo_enviadas_minutos: edicaoLiberacaoEnviadas ? parseInt(edicaoLiberacaoEnviadas, 10) : null,
+              liberacao_intervalo_recebidas_minutos: edicaoLiberacaoRecebidas ? parseInt(edicaoLiberacaoRecebidas, 10) : null,
+            }),
       })
       .eq("id", conversa.id)
       .select()
@@ -1586,6 +1610,8 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
       setEdicaoFotoArquivo(null);
       setEdicaoFotoPreview(null);
       setEdicaoLiberacaoMinutos("");
+      setEdicaoLiberacaoEnviadas("");
+      setEdicaoLiberacaoRecebidas("");
       setEdicaoLiberacaoInicial("");
     }
   }
@@ -1633,22 +1659,51 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
           </label>
         </div>
 
-        <p className="field-label">Liberação gradual do histórico (opcional)</p>
-        <input
-          type="number"
-          min="0"
-          value={liberacaoMinutos}
-          onChange={(e) => setLiberacaoMinutos(e.target.value)}
-          placeholder="Minutos entre cada mensagem antiga aparecer. Vazio = mostra tudo de uma vez."
-          className="field-input mb-2"
-        />
-        {liberacaoMinutos && (
+        {tipo === "grupo" ? (
+          <>
+            <p className="field-label">Liberação gradual do histórico (opcional)</p>
+            <input
+              type="number"
+              min="0"
+              value={liberacaoMinutos}
+              onChange={(e) => setLiberacaoMinutos(e.target.value)}
+              placeholder="Minutos entre cada mensagem antiga aparecer. Vazio = mostra tudo de uma vez."
+              className="field-input mb-2"
+            />
+          </>
+        ) : (
+          <>
+            <p className="field-label">Liberação das mensagens que você envia (minutos, opcional)</p>
+            <input
+              type="number"
+              min="0"
+              value={liberacaoEnviadas}
+              onChange={(e) => setLiberacaoEnviadas(e.target.value)}
+              placeholder="Minutos até a próxima leva de mensagens suas aparecer"
+              className="field-input mb-2"
+            />
+            <p className="field-label">Liberação das mensagens que você recebe (minutos, opcional)</p>
+            <input
+              type="number"
+              min="0"
+              value={liberacaoRecebidas}
+              onChange={(e) => setLiberacaoRecebidas(e.target.value)}
+              placeholder="Minutos até a próxima leva de mensagens da outra pessoa aparecer"
+              className="field-input mb-2"
+            />
+          </>
+        )}
+        {(tipo === "grupo" ? liberacaoMinutos : liberacaoEnviadas || liberacaoRecebidas) && (
           <input
             type="number"
             min="0"
             value={liberacaoInicial}
             onChange={(e) => setLiberacaoInicial(e.target.value)}
-            placeholder="Quantas mensagens já aparecem liberadas no início (vazio = 1)"
+            placeholder={
+              tipo === "grupo"
+                ? "Quantas mensagens já aparecem liberadas no início (vazio = 1)"
+                : "Quantos blocos de mensagens seguidas (de uma pessoa só) já aparecem liberados no início (vazio = 1)"
+            }
             className="field-input mb-3"
           />
         )}
@@ -1819,22 +1874,51 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
                     <input type="file" accept="image/*" onChange={escolherFotoEdicao} className="hidden" />
                   </label>
                 </div>
-                <p className="field-label">Liberação gradual do histórico (opcional)</p>
-                <input
-                  type="number"
-                  min="0"
-                  value={edicaoLiberacaoMinutos}
-                  onChange={(e) => setEdicaoLiberacaoMinutos(e.target.value)}
-                  placeholder="Minutos entre cada mensagem antiga aparecer. Vazio = mostra tudo de uma vez."
-                  className="field-input mb-2"
-                />
-                {edicaoLiberacaoMinutos && (
+                {c.tipo === "grupo" ? (
+                  <>
+                    <p className="field-label">Liberação gradual do histórico (opcional)</p>
+                    <input
+                      type="number"
+                      min="0"
+                      value={edicaoLiberacaoMinutos}
+                      onChange={(e) => setEdicaoLiberacaoMinutos(e.target.value)}
+                      placeholder="Minutos entre cada mensagem antiga aparecer. Vazio = mostra tudo de uma vez."
+                      className="field-input mb-2"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <p className="field-label">Liberação das mensagens que você envia (minutos, opcional)</p>
+                    <input
+                      type="number"
+                      min="0"
+                      value={edicaoLiberacaoEnviadas}
+                      onChange={(e) => setEdicaoLiberacaoEnviadas(e.target.value)}
+                      placeholder="Minutos até a próxima leva de mensagens suas aparecer"
+                      className="field-input mb-2"
+                    />
+                    <p className="field-label">Liberação das mensagens que você recebe (minutos, opcional)</p>
+                    <input
+                      type="number"
+                      min="0"
+                      value={edicaoLiberacaoRecebidas}
+                      onChange={(e) => setEdicaoLiberacaoRecebidas(e.target.value)}
+                      placeholder="Minutos até a próxima leva de mensagens da outra pessoa aparecer"
+                      className="field-input mb-2"
+                    />
+                  </>
+                )}
+                {(c.tipo === "grupo" ? edicaoLiberacaoMinutos : edicaoLiberacaoEnviadas || edicaoLiberacaoRecebidas) && (
                   <input
                     type="number"
                     min="0"
                     value={edicaoLiberacaoInicial}
                     onChange={(e) => setEdicaoLiberacaoInicial(e.target.value)}
-                    placeholder="Quantas mensagens já aparecem liberadas no início (vazio = 1)"
+                    placeholder={
+                      c.tipo === "grupo"
+                        ? "Quantas mensagens já aparecem liberadas no início (vazio = 1)"
+                        : "Quantos blocos de mensagens seguidas (de uma pessoa só) já aparecem liberados no início (vazio = 1)"
+                    }
                     className="field-input mb-3"
                   />
                 )}

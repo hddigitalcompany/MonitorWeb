@@ -17,7 +17,9 @@ const EMOJIS_RAPIDOS = ["😀", "😂", "❤️", "👍", "🙏", "😊", "😢"
 // conversa de exemplo não vê.
 export default function ConversasDemo({ conversas, userId, textos }) {
   const [abertaId, setAbertaId] = useState(null);
-  const [mensagensPorConversa, setMensagensPorConversa] = useState({});
+  const [roteiroPorConversa, setRoteiroPorConversa] = useState({});
+  const [carregandoRoteiro, setCarregandoRoteiro] = useState(true);
+  const [propriasPorConversa, setPropriasPorConversa] = useState({});
   const [carregandoId, setCarregandoId] = useState(null);
   const [rascunho, setRascunho] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -25,10 +27,32 @@ export default function ConversasDemo({ conversas, userId, textos }) {
   const [, forcarAtualizacao] = useState(0);
   const supabase = createClient();
 
+  // Busca de uma vez as mensagens do "roteiro" (escritas pelo admin) de
+  // todas as conversas de exemplo — precisa disso já de cara pra poder
+  // calcular o balãozinho de não lidas na lista, sem esperar a pessoa
+  // abrir cada conversa.
+  useEffect(() => {
+    supabase
+      .from("mensagens_demo")
+      .select("*")
+      .is("user_id", null)
+      .order("ordem", { ascending: true, nullsFirst: false })
+      .order("criado_em", { ascending: true })
+      .then(({ data }) => {
+        const mapa = {};
+        (data || []).forEach((m) => {
+          if (!mapa[m.conversa_id]) mapa[m.conversa_id] = [];
+          mapa[m.conversa_id].push({ ...m, dataHoraIso: m.enviado_em });
+        });
+        setRoteiroPorConversa(mapa);
+        setCarregandoRoteiro(false);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Busca de uma vez o progresso da pessoa em todas as conversas de
   // exemplo (quando abriu cada uma pela primeira vez e quantas
-  // mensagens já leu) — é isso que alimenta o balãozinho de mensagens
-  // não vistas na lista, sem precisar abrir cada conversa antes.
+  // mensagens já leu) — também alimenta o balãozinho de não vistas.
   useEffect(() => {
     supabase
       .from("conversas_demo_progresso")
@@ -48,25 +72,29 @@ export default function ConversasDemo({ conversas, userId, textos }) {
   // tela de tempos em tempos pra os balõezinhos e as mensagens antigas
   // irem aparecendo sozinhos, sem precisar recarregar a página.
   useEffect(() => {
-    if (!conversas.some((c) => c.liberacao_intervalo_minutos)) return;
+    const temLiberacao = conversas.some(
+      (c) => c.liberacao_intervalo_minutos || c.liberacao_intervalo_enviadas_minutos || c.liberacao_intervalo_recebidas_minutos
+    );
+    if (!temLiberacao) return;
     const id = setInterval(() => forcarAtualizacao((t) => t + 1), 30000);
     return () => clearInterval(id);
   }, [conversas]);
 
-  function naoLidas(conversa) {
-    const progresso = progressoPorConversa[conversa.id];
-    const visivelAgora = quantidadeVisivelConversa({
-      liberacaoIntervaloMinutos: conversa.liberacao_intervalo_minutos,
-      liberacaoQuantidadeInicial: conversa.liberacao_quantidade_inicial,
-      primeiraAbertura: progresso?.primeira_abertura,
-      totalRoteiro: conversa.total_mensagens,
+  function quantidadeVisivelAgora(conversa) {
+    return quantidadeVisivelConversa({
+      conversa,
+      doRoteiro: roteiroPorConversa[conversa.id] || [],
+      primeiraAbertura: progressoPorConversa[conversa.id]?.primeira_abertura,
     });
-    const lidas = progresso?.mensagens_lidas || 0;
+  }
+
+  function naoLidas(conversa) {
+    const visivelAgora = quantidadeVisivelAgora(conversa);
+    const lidas = progressoPorConversa[conversa.id]?.mensagens_lidas || 0;
     return Math.max(0, visivelAgora - lidas);
   }
 
-  async function marcarComoLida(conversa, todasMensagens) {
-    const doRoteiro = todasMensagens.filter((m) => m.user_id == null);
+  async function marcarComoLida(conversa) {
     let progresso = progressoPorConversa[conversa.id];
 
     if (!progresso) {
@@ -78,10 +106,9 @@ export default function ConversasDemo({ conversas, userId, textos }) {
     }
 
     const visivelAgora = quantidadeVisivelConversa({
-      liberacaoIntervaloMinutos: conversa.liberacao_intervalo_minutos,
-      liberacaoQuantidadeInicial: conversa.liberacao_quantidade_inicial,
+      conversa,
+      doRoteiro: roteiroPorConversa[conversa.id] || [],
       primeiraAbertura: progresso.primeira_abertura,
-      totalRoteiro: doRoteiro.length,
     });
 
     if (visivelAgora !== progresso.mensagens_lidas) {
@@ -106,47 +133,43 @@ export default function ConversasDemo({ conversas, userId, textos }) {
     setAbertaId(conversa.id);
     setRascunho("");
 
-    let mensagens = mensagensPorConversa[conversa.id];
-    if (!mensagens) {
+    if (!propriasPorConversa[conversa.id]) {
       setCarregandoId(conversa.id);
       const { data } = await supabase
         .from("mensagens_demo")
         .select("*")
         .eq("conversa_id", conversa.id)
-        .order("ordem", { ascending: true, nullsFirst: false })
+        .eq("user_id", userId)
         .order("criado_em", { ascending: true });
-      mensagens = (data || []).map((m) => ({ ...m, dataHoraIso: m.enviado_em }));
-      setMensagensPorConversa((atual) => ({ ...atual, [conversa.id]: mensagens }));
+      setPropriasPorConversa((atual) => ({
+        ...atual,
+        [conversa.id]: (data || []).map((m) => ({ ...m, dataHoraIso: m.enviado_em })),
+      }));
       setCarregandoId(null);
     }
 
-    marcarComoLida(conversa, mensagens);
+    marcarComoLida(conversa);
   }
 
-  // Se a conversa tiver liberação gradual, mostra só uma parte das
-  // mensagens do roteiro (as que não foram escritas pelo próprio
-  // cliente), liberando uma a mais a cada N minutos desde a primeira
-  // vez que a pessoa abriu essa conversa. As mensagens que a própria
-  // pessoa escreveu continuando a conversa sempre aparecem.
+  // Junta o que já está liberado do roteiro com as mensagens que a
+  // própria pessoa escreveu continuando a conversa (essas sempre
+  // aparecem, não entram na liberação gradual).
   function mensagensVisiveis(conversa) {
-    const todas = mensagensPorConversa[conversa.id] || [];
-    const doRoteiro = todas.filter((m) => m.user_id == null);
-    const proprias = todas.filter((m) => m.user_id != null);
-    const progresso = progressoPorConversa[conversa.id];
+    const doRoteiro = roteiroPorConversa[conversa.id] || [];
+    const proprias = propriasPorConversa[conversa.id] || [];
 
     const quantidade = quantidadeVisivelConversa({
-      liberacaoIntervaloMinutos: conversa.liberacao_intervalo_minutos,
-      liberacaoQuantidadeInicial: conversa.liberacao_quantidade_inicial,
-      primeiraAbertura: progresso?.primeira_abertura,
-      totalRoteiro: doRoteiro.length,
+      conversa,
+      doRoteiro,
+      primeiraAbertura: progressoPorConversa[conversa.id]?.primeira_abertura,
     });
 
     return { visiveis: [...doRoteiro.slice(0, quantidade), ...proprias], faltam: doRoteiro.length - quantidade };
   }
 
   async function enviar(conversa) {
-    const texto = rascunho.trim();
-    if (!texto || enviando) return;
+    const textoMensagem = rascunho.trim();
+    if (!textoMensagem || enviando) return;
     setEnviando(true);
 
     const { data: nova, error } = await supabase
@@ -155,13 +178,13 @@ export default function ConversasDemo({ conversas, userId, textos }) {
         conversa_id: conversa.id,
         user_id: userId,
         remetente: conversa.participante_voce,
-        texto,
+        texto: textoMensagem,
       })
       .select()
       .single();
 
     if (!error && nova) {
-      setMensagensPorConversa((atual) => ({
+      setPropriasPorConversa((atual) => ({
         ...atual,
         [conversa.id]: [...(atual[conversa.id] || []), { ...nova, dataHoraIso: nova.enviado_em }],
       }));
@@ -196,7 +219,7 @@ export default function ConversasDemo({ conversas, userId, textos }) {
                 <p className="truncate text-sm text-ink">{c.titulo}</p>
                 <p className="text-[11px] text-muted">{c.total_mensagens} mensagens</p>
               </div>
-              {abertaId !== c.id && naoLidas(c) > 0 && (
+              {abertaId !== c.id && !carregandoRoteiro && naoLidas(c) > 0 && (
                 <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-amber px-1.5 text-[11px] font-semibold text-ink">
                   {naoLidas(c)}
                 </span>
