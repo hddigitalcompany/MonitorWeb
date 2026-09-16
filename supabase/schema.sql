@@ -590,3 +590,8 @@ create policy "Participante envia mensagem"
   );
 
 alter publication supabase_realtime add table public.mensagens_reais;
+
+-- Quantas mensagens do roteiro já aparecem liberadas assim que a pessoa
+-- abre a conversa pela primeira vez (antes de começar a contar o
+-- intervalo de liberação das próximas). Vazio = considera 1.
+alter table public.conversas_demo add column if not exists liberacao_quantidade_inicial integer;

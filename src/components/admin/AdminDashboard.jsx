@@ -1291,7 +1291,9 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
   const [edicaoFotoArquivo, setEdicaoFotoArquivo] = useState(null);
   const [edicaoFotoPreview, setEdicaoFotoPreview] = useState(null);
   const [liberacaoMinutos, setLiberacaoMinutos] = useState("");
+  const [liberacaoInicial, setLiberacaoInicial] = useState("");
   const [edicaoLiberacaoMinutos, setEdicaoLiberacaoMinutos] = useState("");
+  const [edicaoLiberacaoInicial, setEdicaoLiberacaoInicial] = useState("");
   const supabase = createClient();
 
   // Cada vez que essa aba é aberta, o componente monta de novo (o painel
@@ -1328,6 +1330,7 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
     setFotoArquivo(null);
     setFotoPreview(null);
     setLiberacaoMinutos("");
+    setLiberacaoInicial("");
   }
 
   function escolherFoto(e) {
@@ -1433,6 +1436,7 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
         foto_url: fotoUrl,
         foto_caminho: fotoCaminho,
         liberacao_intervalo_minutos: liberacaoMinutos ? parseInt(liberacaoMinutos, 10) : null,
+        liberacao_quantidade_inicial: liberacaoInicial !== "" ? parseInt(liberacaoInicial, 10) : null,
       })
       .select()
       .single();
@@ -1499,6 +1503,9 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
     setEdicaoLiberacaoMinutos(
       conversa.liberacao_intervalo_minutos != null ? String(conversa.liberacao_intervalo_minutos) : ""
     );
+    setEdicaoLiberacaoInicial(
+      conversa.liberacao_quantidade_inicial != null ? String(conversa.liberacao_quantidade_inicial) : ""
+    );
   }
 
   function cancelarEdicao() {
@@ -1506,6 +1513,7 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
     setEdicaoFotoArquivo(null);
     setEdicaoFotoPreview(null);
     setEdicaoLiberacaoMinutos("");
+    setEdicaoLiberacaoInicial("");
   }
 
   async function salvarEdicao(conversa) {
@@ -1531,6 +1539,7 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
         foto_url: fotoUrl,
         foto_caminho: fotoCaminho,
         liberacao_intervalo_minutos: edicaoLiberacaoMinutos ? parseInt(edicaoLiberacaoMinutos, 10) : null,
+        liberacao_quantidade_inicial: edicaoLiberacaoInicial !== "" ? parseInt(edicaoLiberacaoInicial, 10) : null,
       })
       .eq("id", conversa.id)
       .select()
@@ -1541,6 +1550,7 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
       setEdicaoFotoArquivo(null);
       setEdicaoFotoPreview(null);
       setEdicaoLiberacaoMinutos("");
+      setEdicaoLiberacaoInicial("");
     }
   }
 
@@ -1594,8 +1604,18 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
           value={liberacaoMinutos}
           onChange={(e) => setLiberacaoMinutos(e.target.value)}
           placeholder="Minutos entre cada mensagem antiga aparecer. Vazio = mostra tudo de uma vez."
-          className="field-input mb-3"
+          className="field-input mb-2"
         />
+        {liberacaoMinutos && (
+          <input
+            type="number"
+            min="0"
+            value={liberacaoInicial}
+            onChange={(e) => setLiberacaoInicial(e.target.value)}
+            placeholder="Quantas mensagens já aparecem liberadas no início (vazio = 1)"
+            className="field-input mb-3"
+          />
+        )}
 
         {!mensagensParaSalvar && !modoManual && (
           <div className={tipo === "normal" ? "flex gap-2" : ""}>
@@ -1770,8 +1790,18 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
                   value={edicaoLiberacaoMinutos}
                   onChange={(e) => setEdicaoLiberacaoMinutos(e.target.value)}
                   placeholder="Minutos entre cada mensagem antiga aparecer. Vazio = mostra tudo de uma vez."
-                  className="field-input mb-3"
+                  className="field-input mb-2"
                 />
+                {edicaoLiberacaoMinutos && (
+                  <input
+                    type="number"
+                    min="0"
+                    value={edicaoLiberacaoInicial}
+                    onChange={(e) => setEdicaoLiberacaoInicial(e.target.value)}
+                    placeholder="Quantas mensagens já aparecem liberadas no início (vazio = 1)"
+                    className="field-input mb-3"
+                  />
+                )}
                 <div className="flex gap-2">
                   <button onClick={cancelarEdicao} className="btn-secondary flex-1">
                     Cancelar

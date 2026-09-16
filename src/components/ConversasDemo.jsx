@@ -88,8 +88,9 @@ export default function ConversasDemo({ conversas, userId }) {
 
     const doRoteiro = todas.filter((m) => m.user_id == null);
     const proprias = todas.filter((m) => m.user_id != null);
+    const inicial = conversa.liberacao_quantidade_inicial != null ? conversa.liberacao_quantidade_inicial : 1;
     const minutosPassados = (Date.now() - new Date(abertura).getTime()) / 60000;
-    const quantidade = Math.min(doRoteiro.length, 1 + Math.floor(minutosPassados / intervalo));
+    const quantidade = Math.min(doRoteiro.length, inicial + Math.floor(minutosPassados / intervalo));
 
     return { visiveis: [...doRoteiro.slice(0, quantidade), ...proprias], faltam: doRoteiro.length - quantidade };
   }
