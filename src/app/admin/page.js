@@ -15,10 +15,27 @@ async function buscarClientesEUsuarios(supabase, idsAdminsArray) {
 
   try {
     const supabaseAdmin = createAdminClient();
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ perPage: 200 });
-    if (error) throw error;
 
-    const usuarios = data?.users || [];
+    // O Supabase devolve os usuários paginados (200 por página aqui). Se a
+    // gente só pedir a primeira página, quem se cadastrou depois do
+    // usuário #200 nunca aparece. Por isso busca página por página até
+    // vir uma página vazia — assim pega todo mundo, não importa quantos
+    // sejam.
+    const usuarios = [];
+    let pagina = 1;
+    const tamanhoPagina = 200;
+    // Limite de segurança pra nunca ficar num loop infinito por engano.
+    for (let tentativas = 0; tentativas < 200; tentativas++) {
+      const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+        page: pagina,
+        perPage: tamanhoPagina,
+      });
+      if (error) throw error;
+      const pageUsuarios = data?.users || [];
+      usuarios.push(...pageUsuarios);
+      if (pageUsuarios.length < tamanhoPagina) break;
+      pagina += 1;
+    }
     const mapaUsuarios = new Map(
       usuarios.map((u) => [
         u.id,
@@ -47,20 +64,34 @@ async function buscarClientesEUsuarios(supabase, idsAdminsArray) {
 
 async function buscarEventosVisita(supabase, idsAdmins, desde) {
   try {
-    let consulta = supabase
-      .from("eventos_visita")
-      .select("user_id, rota, criado_em")
-      .gte("criado_em", desde)
-      .order("criado_em", { ascending: true })
-      .limit(20000);
+    // O Supabase tem um teto de quantas linhas devolve de uma vez só
+    // (configurado lá no projeto), então pedir .limit(20000) não garante
+    // vir 20000 — pode vir bem menos, sem avisar. Por isso busca em
+    // fatias com .range(), avançando pelo tanto que realmente voltou a
+    // cada vez, até vir uma fatia vazia.
+    const eventos = [];
+    let inicio = 0;
+    const tamanhoFatia = 1000;
+    for (let tentativas = 0; tentativas < 200; tentativas++) {
+      let consulta = supabase
+        .from("eventos_visita")
+        .select("user_id, rota, criado_em")
+        .gte("criado_em", desde)
+        .order("criado_em", { ascending: true })
+        .range(inicio, inicio + tamanhoFatia - 1);
 
-    if (idsAdmins.length > 0) {
-      consulta = consulta.not("user_id", "in", `(${idsAdmins.join(",")})`);
+      if (idsAdmins.length > 0) {
+        consulta = consulta.not("user_id", "in", `(${idsAdmins.join(",")})`);
+      }
+
+      const { data, error } = await consulta;
+      if (error) throw error;
+      const fatia = data || [];
+      eventos.push(...fatia);
+      if (fatia.length < tamanhoFatia) break;
+      inicio += fatia.length;
     }
-
-    const { data, error } = await consulta;
-    if (error) throw error;
-    return data || [];
+    return eventos;
   } catch (err) {
     console.error("[admin/painel] erro ao buscar eventos de visita:", err?.message || err);
     return [];
@@ -69,14 +100,26 @@ async function buscarEventosVisita(supabase, idsAdmins, desde) {
 
 async function buscarVisitasLogin(supabase, desde) {
   try {
-    const { data, error } = await supabase
-      .from("visitas_login")
-      .select("id, visitante_id, criado_em")
-      .gte("criado_em", desde)
-      .order("criado_em", { ascending: true })
-      .limit(20000);
-    if (error) throw error;
-    return data || [];
+    // Mesma lógica de fatiar com .range() explicada em cima, em
+    // buscarEventosVisita — evita o teto de linhas do Supabase esconder
+    // visitas mais recentes.
+    const visitas = [];
+    let inicio = 0;
+    const tamanhoFatia = 1000;
+    for (let tentativas = 0; tentativas < 200; tentativas++) {
+      const { data, error } = await supabase
+        .from("visitas_login")
+        .select("id, visitante_id, criado_em")
+        .gte("criado_em", desde)
+        .order("criado_em", { ascending: true })
+        .range(inicio, inicio + tamanhoFatia - 1);
+      if (error) throw error;
+      const fatia = data || [];
+      visitas.push(...fatia);
+      if (fatia.length < tamanhoFatia) break;
+      inicio += fatia.length;
+    }
+    return visitas;
   } catch (err) {
     console.error("[admin/painel] erro ao buscar visitas de login:", err?.message || err);
     return [];
