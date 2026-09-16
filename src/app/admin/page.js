@@ -3,6 +3,13 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 
+// O Next.js guarda em cache o resultado de cada busca (fetch) por padrão,
+// então sem isso aqui o painel podia continuar mostrando dados antigos —
+// tipo uma conta criada agora ainda não contando em "Hoje" — até o cache
+// vencer sozinho. Essa linha força sempre buscar tudo de novo na hora.
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 async function buscarClientesEUsuarios(supabase, idsAdminsArray) {
   const idsAdmins = new Set(idsAdminsArray || []);
 
