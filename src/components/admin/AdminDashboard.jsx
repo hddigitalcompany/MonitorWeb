@@ -2,7 +2,25 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Trash2, Upload, Send, ArrowLeft, Pencil } from "lucide-react";
+import {
+  Trash2,
+  Upload,
+  Send,
+  ArrowLeft,
+  Pencil,
+  Home,
+  Image as ImageIcon,
+  MapPin,
+  Phone,
+  Search,
+  Wifi,
+  BookUser,
+  Headset,
+  MessageCircle,
+  CreditCard,
+  LogIn,
+  ChevronDown,
+} from "lucide-react";
 import { extrairIdYoutube } from "@/lib/youtube";
 import { TEXTOS_PADRAO } from "@/lib/textos";
 import { calcularEtapaReembolso } from "@/lib/reembolso";
@@ -823,18 +841,83 @@ function SecaoSuporte({ chamadosIniciais }) {
 
 
 const GRUPOS_TEXTOS = [
-  { titulo: "Início", campos: [["inicio_titulo", "Título"], ["inicio_subtitulo", "Subtítulo"]] },
-  { titulo: "Fotos", campos: [["fotos_titulo", "Título"], ["fotos_subtitulo", "Subtítulo"]] },
-  { titulo: "Locais seguros", campos: [["locais_titulo", "Título"], ["locais_subtitulo", "Subtítulo"]] },
-  { titulo: "Lembretes", campos: [["lembretes_titulo", "Título"], ["lembretes_subtitulo", "Subtítulo"]] },
-  { titulo: "Links de ajuda", campos: [["links_titulo", "Título"], ["links_subtitulo", "Subtítulo"]] },
-  { titulo: "Wifi", campos: [["wifi_titulo", "Título"], ["wifi_subtitulo", "Subtítulo"]] },
-  { titulo: "Contatos úteis", campos: [["contatos_titulo", "Título"], ["contatos_subtitulo", "Subtítulo"]] },
-  { titulo: "Suporte", campos: [["suporte_titulo", "Título"], ["suporte_subtitulo", "Subtítulo"]] },
-  { titulo: "Conversas", campos: [["conversas_titulo", "Título"], ["conversas_subtitulo", "Subtítulo"]] },
-  { titulo: "Assinatura", campos: [["assinatura_titulo", "Título"]] },
+  {
+    titulo: "Início",
+    icon: Home,
+    campos: [["inicio_titulo", "Título"], ["inicio_subtitulo", "Subtítulo"]],
+  },
+  {
+    titulo: "Fotos",
+    icon: ImageIcon,
+    campos: [
+      ["fotos_titulo", "Título"],
+      ["fotos_subtitulo", "Subtítulo"],
+      ["fotos_vazio", "Vazio"],
+    ],
+  },
+  {
+    titulo: "Locais seguros",
+    icon: MapPin,
+    campos: [
+      ["locais_titulo", "Título"],
+      ["locais_subtitulo", "Subtítulo"],
+      ["locais_vazio", "Vazio"],
+    ],
+  },
+  {
+    titulo: "Lembretes",
+    icon: Phone,
+    campos: [
+      ["lembretes_titulo", "Título"],
+      ["lembretes_subtitulo", "Subtítulo"],
+      ["lembretes_vazio", "Vazio"],
+    ],
+  },
+  {
+    titulo: "Links de ajuda",
+    icon: Search,
+    campos: [
+      ["links_titulo", "Título"],
+      ["links_subtitulo", "Subtítulo"],
+      ["links_vazio", "Vazio"],
+    ],
+  },
+  {
+    titulo: "Wifi",
+    icon: Wifi,
+    campos: [
+      ["wifi_titulo", "Título"],
+      ["wifi_subtitulo", "Subtítulo"],
+      ["wifi_vazio", "Vazio"],
+    ],
+  },
+  {
+    titulo: "Contatos úteis",
+    icon: BookUser,
+    campos: [
+      ["contatos_titulo", "Título"],
+      ["contatos_subtitulo", "Subtítulo"],
+      ["contatos_vazio", "Vazio"],
+    ],
+  },
+  {
+    titulo: "Suporte",
+    icon: Headset,
+    campos: [["suporte_titulo", "Título"], ["suporte_subtitulo", "Subtítulo"]],
+  },
+  {
+    titulo: "Conversas",
+    icon: MessageCircle,
+    campos: [["conversas_titulo", "Título"], ["conversas_subtitulo", "Subtítulo"]],
+  },
+  {
+    titulo: "Assinatura",
+    icon: CreditCard,
+    campos: [["assinatura_titulo", "Título"], ["assinatura_texto", "Texto"]],
+  },
   {
     titulo: "Login e criação de conta",
+    icon: LogIn,
     campos: [
       ["login_selo", "Selo"],
       ["login_titulo", "Título"],
@@ -846,6 +929,7 @@ const GRUPOS_TEXTOS = [
 ];
 
 function SecaoTextos({ itens }) {
+  const [categoriaAberta, setCategoriaAberta] = useState(GRUPOS_TEXTOS[0].titulo);
   const mapa = {};
   itens.forEach((t) => {
     mapa[t.chave] = t.valor;
@@ -854,24 +938,53 @@ function SecaoTextos({ itens }) {
   return (
     <div>
       <p className="mb-4 text-xs text-muted">
-        Clique em qualquer texto pra editar. Salva sozinho assim que você sai do campo.
+        Clique numa categoria pra abrir, e em qualquer texto pra editar. Salva sozinho assim que
+        você sai do campo.
       </p>
-      {GRUPOS_TEXTOS.map((grupo) => (
-        <div key={grupo.titulo} className="card mb-4">
-          <p className="mb-2 text-sm text-ink">{grupo.titulo}</p>
-          {grupo.campos.map(([chave, label]) => (
-            <TextoEditavel
-              key={chave}
-              chave={chave}
-              label={label}
-              valorInicial={mapa[chave] ?? TEXTOS_PADRAO[chave] ?? ""}
-            />
-          ))}
-        </div>
-      ))}
+      <div className="flex flex-col gap-2">
+        {GRUPOS_TEXTOS.map((grupo) => {
+          const Icon = grupo.icon;
+          const aberta = categoriaAberta === grupo.titulo;
+          return (
+            <div key={grupo.titulo} className="overflow-hidden rounded-sm border border-border bg-surface">
+              <button
+                onClick={() => setCategoriaAberta(aberta ? null : grupo.titulo)}
+                className="flex w-full items-center gap-2.5 p-3 text-left"
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber/20 text-ink">
+                  <Icon size={15} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-ink">{grupo.titulo}</p>
+                  <p className="text-[11px] text-muted">
+                    {grupo.campos.length} {grupo.campos.length === 1 ? "texto" : "textos"}
+                  </p>
+                </div>
+                <ChevronDown
+                  size={16}
+                  className={`shrink-0 text-muted transition-transform ${aberta ? "rotate-180" : ""}`}
+                />
+              </button>
+              {aberta && (
+                <div className="border-t border-border px-3">
+                  {grupo.campos.map(([chave, label]) => (
+                    <TextoEditavel
+                      key={chave}
+                      chave={chave}
+                      label={label}
+                      valorInicial={mapa[chave] ?? TEXTOS_PADRAO[chave] ?? ""}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
+
 
 function TextoEditavel({ chave, label, valorInicial }) {
   const [salvo, setSalvo] = useState(valorInicial);

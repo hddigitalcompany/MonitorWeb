@@ -27,7 +27,7 @@ export default async function WifiPage() {
     <div>
       <PageHeader title={texto(textos, "wifi_titulo")} subtitle={texto(textos, "wifi_subtitulo")} />
       {dicas.length === 0 ? (
-        <p className="text-sm text-muted">Nenhuma dica publicada ainda.</p>
+        <p className="text-sm text-muted">{texto(textos, "wifi_vazio")}</p>
       ) : (
         <div className="flex flex-col gap-2">
           {dicas.map((dica) => (

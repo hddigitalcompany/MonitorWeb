@@ -27,7 +27,7 @@ export default async function FotosPage() {
     <div>
       <PageHeader title={texto(textos, "fotos_titulo")} subtitle={texto(textos, "fotos_subtitulo")} />
       {fotos.length === 0 ? (
-        <p className="text-sm text-muted">Nenhuma foto publicada ainda.</p>
+        <p className="text-sm text-muted">{texto(textos, "fotos_vazio")}</p>
       ) : (
         <div className="grid grid-cols-2 gap-2">
           {fotos.map((foto) => (

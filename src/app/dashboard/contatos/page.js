@@ -27,7 +27,7 @@ export default async function ContatosPage() {
     <div>
       <PageHeader title={texto(textos, "contatos_titulo")} subtitle={texto(textos, "contatos_subtitulo")} />
       {contatos.length === 0 ? (
-        <p className="text-sm text-muted">Nenhum contato publicado ainda.</p>
+        <p className="text-sm text-muted">{texto(textos, "contatos_vazio")}</p>
       ) : (
         <div className="flex flex-col gap-2">
           {contatos.map((c) => (

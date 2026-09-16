@@ -27,7 +27,7 @@ export default async function LocaisSegurosPage() {
     <div>
       <PageHeader title={texto(textos, "locais_titulo")} subtitle={texto(textos, "locais_subtitulo")} />
       {itens.length === 0 ? (
-        <p className="text-sm text-muted">Nenhuma sugestão publicada ainda.</p>
+        <p className="text-sm text-muted">{texto(textos, "locais_vazio")}</p>
       ) : (
         <div className="flex flex-col gap-2">
           {itens.map((item) => (

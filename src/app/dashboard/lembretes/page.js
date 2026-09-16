@@ -33,7 +33,7 @@ export default async function LembretesPage() {
     <div>
       <PageHeader title={texto(textos, "lembretes_titulo")} subtitle={texto(textos, "lembretes_subtitulo")} />
       {itens.length === 0 ? (
-        <p className="text-sm text-muted">Nenhum lembrete publicado ainda.</p>
+        <p className="text-sm text-muted">{texto(textos, "lembretes_vazio")}</p>
       ) : (
         <div className="flex flex-col gap-2">
           {itens.map((item) => (

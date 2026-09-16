@@ -35,7 +35,7 @@ export default async function LinksAjudaPage() {
     <div>
       <PageHeader title={texto(textos, "links_titulo")} subtitle={texto(textos, "links_subtitulo")} />
       {itens.length === 0 ? (
-        <p className="text-sm text-muted">Nenhum link publicado ainda.</p>
+        <p className="text-sm text-muted">{texto(textos, "links_vazio")}</p>
       ) : (
         <div className="flex flex-col gap-2">
           {itens.map((item) => {

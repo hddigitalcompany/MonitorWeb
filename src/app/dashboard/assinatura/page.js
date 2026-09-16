@@ -9,7 +9,7 @@ export default async function AssinaturaPage() {
   return (
     <div>
       <PageHeader title={texto(textos, "assinatura_titulo")} />
-      <p className="text-sm text-muted">Em breve.</p>
+      <p className="text-sm text-muted">{texto(textos, "assinatura_texto")}</p>
     </div>
   );
 }
