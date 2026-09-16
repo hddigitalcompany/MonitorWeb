@@ -1,37 +1,59 @@
 "use server";
 
-import { headers } from "next/headers";
+import crypto from "crypto";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
-// Login "só com email", com verificação de verdade: a pessoa digita o
-// email, a gente manda um link de confirmação por email (nada de código
-// pra digitar) e só quando ela clica nesse link é que a conta é criada
-// (se ainda não existir) e ela entra de fato. Antes isso criava e
-// logava na hora, sem checar se o email digitado existia de verdade —
-// bastava parecer um email ("tem @ e .") pra passar.
+// Gera uma "senha" fixa a partir do email — a pessoa nunca vê nem digita
+// essa senha, é só um jeito de usar o login padrão do Supabase (email +
+// senha) por trás dos panos pra oferecer um "entrar só com o email".
+function senhaDeterministica(email) {
+  return crypto
+    .createHmac("sha256", process.env.SUPABASE_SERVICE_ROLE_KEY)
+    .update(email)
+    .digest("hex");
+}
+
+// Login "só com email": sem senha visível, entra na hora — sem link nem
+// código de confirmação, pra não complicar pra quem tem menos prática
+// com celular. Em troca, quem escreve o email valida o formato (ver
+// validarFormatoEmail) e a tela já sugere corrigir domínios comuns
+// digitados errado (gmial.com, hotmail.con etc — ver emailDominios.js),
+// já que não dá pra confirmar de verdade sem sair do app.
 export async function entrarComEmail(emailBruto) {
   const email = (emailBruto || "").trim().toLowerCase();
-  if (!email || !email.includes("@") || !email.includes(".")) {
+  if (!validarFormatoEmail(email)) {
     return { erro: "Escreve um email válido." };
   }
 
-  const listaHeaders = headers();
-  const host = listaHeaders.get("host");
-  const protocolo = listaHeaders.get("x-forwarded-proto") || "https";
-  const origem = `${protocolo}://${host}`;
+  const senha = senhaDeterministica(email);
+  const admin = createAdminClient();
 
-  const supabase = createClient();
-  const { error } = await supabase.auth.signInWithOtp({
+  const { error: erroCriar } = await admin.auth.admin.createUser({
     email,
-    options: {
-      emailRedirectTo: `${origem}/auth/callback`,
-    },
+    password: senha,
+    email_confirm: true,
   });
 
-  if (error) {
-    console.error("[authEmail] erro ao enviar link de confirmação:", error.message);
-    return { erro: "Não deu pra enviar o link agora. Tenta de novo em instantes." };
+  const jaExistia = erroCriar && /already|existe/i.test(erroCriar.message || "");
+  if (erroCriar && !jaExistia) {
+    console.error("[authEmail] erro ao criar usuário:", erroCriar.message);
+    return { erro: "Não deu pra entrar agora. Tenta de novo em instantes." };
+  }
+
+  const supabase = createClient();
+  const { error: erroLogin } = await supabase.auth.signInWithPassword({ email, password: senha });
+  if (erroLogin) {
+    console.error("[authEmail] erro ao entrar:", erroLogin.message);
+    return { erro: "Não deu pra entrar agora. Tenta de novo em instantes." };
   }
 
   return { ok: true };
+}
+
+// Checagem básica de formato (não confirma que o email existe de
+// verdade): um texto, um "@", outro texto, um "." e mais texto — sem
+// espaços nem "@" repetido.
+function validarFormatoEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
