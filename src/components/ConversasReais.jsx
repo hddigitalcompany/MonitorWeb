@@ -26,6 +26,7 @@ export default function ConversasReais({ userId, textos }) {
   const [carregandoMensagens, setCarregandoMensagens] = useState(false);
   const [rascunho, setRascunho] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState("");
   const supabase = createClient();
 
   useEffect(() => {
@@ -35,10 +36,15 @@ export default function ConversasReais({ userId, textos }) {
 
   async function carregarConversas() {
     setCarregando(true);
-    const { data: minhas } = await supabase
+    const { data: minhas, error: erroMinhas } = await supabase
       .from("conversas_reais_participantes")
       .select("conversa_id")
       .eq("user_id", userId);
+
+    if (erroMinhas) {
+      console.error("[conversas_reais] erro ao buscar minhas conversas:", erroMinhas.message);
+      setErro("Não deu pra carregar suas conversas agora. Tente atualizar a página.");
+    }
 
     const idsConversas = (minhas || []).map((p) => p.conversa_id);
     if (idsConversas.length === 0) {
@@ -102,6 +108,7 @@ export default function ConversasReais({ userId, textos }) {
   async function confirmarNovaConversa() {
     if (selecionados.length === 0) return;
     setMostrarSeletor(false);
+    setErro("");
 
     if (selecionados.length === 1) {
       const idOutro = selecionados[0];
@@ -129,10 +136,31 @@ export default function ConversasReais({ userId, textos }) {
     }
 
     const novoId = crypto.randomUUID();
-    await supabase.from("conversas_reais").insert({ id: novoId });
-    await supabase.from("conversas_reais_participantes").insert({ conversa_id: novoId, user_id: userId });
+
+    const { error: erroConversa } = await supabase.from("conversas_reais").insert({ id: novoId });
+    if (erroConversa) {
+      console.error("[conversas_reais] erro ao criar conversa:", erroConversa.message);
+      setErro("Não deu pra iniciar a conversa agora. Tente de novo em instantes.");
+      return;
+    }
+
+    const { error: erroEu } = await supabase
+      .from("conversas_reais_participantes")
+      .insert({ conversa_id: novoId, user_id: userId });
+    if (erroEu) {
+      console.error("[conversas_reais] erro ao entrar na própria conversa:", erroEu.message);
+      setErro("Não deu pra iniciar a conversa agora. Tente de novo em instantes.");
+      return;
+    }
+
     for (const idPessoa of selecionados) {
-      await supabase.from("conversas_reais_participantes").insert({ conversa_id: novoId, user_id: idPessoa });
+      const { error: erroOutro } = await supabase
+        .from("conversas_reais_participantes")
+        .insert({ conversa_id: novoId, user_id: idPessoa });
+      if (erroOutro) {
+        console.error("[conversas_reais] erro ao adicionar participante:", erroOutro.message);
+        setErro("A conversa foi criada, mas não deu pra adicionar todo mundo. Tente de novo.");
+      }
     }
 
     const nomes = pessoas.filter((p) => selecionados.includes(p.user_id)).map((p) => p.nome);
@@ -194,6 +222,7 @@ export default function ConversasReais({ userId, textos }) {
     const texto = rascunho.trim();
     if (!texto || enviando || !abertaId) return;
     setEnviando(true);
+    setErro("");
 
     const { data: nova, error } = await supabase
       .from("mensagens_reais")
@@ -201,7 +230,10 @@ export default function ConversasReais({ userId, textos }) {
       .select()
       .single();
 
-    if (!error && nova) {
+    if (error) {
+      console.error("[conversas_reais] erro ao enviar mensagem:", error.message);
+      setErro("Não deu pra enviar essa mensagem. Tente de novo.");
+    } else if (nova) {
       setMensagens((atual) => (atual.some((m) => m.id === nova.id) ? atual : [...atual, nova]));
       const agora = new Date().toISOString();
       await supabase.from("conversas_reais").update({ ultima_mensagem_em: agora }).eq("id", abertaId);
@@ -229,6 +261,8 @@ export default function ConversasReais({ userId, textos }) {
           <Plus size={14} /> {texto(textos, "conversas_reais_botao_nova")}
         </button>
       </div>
+
+      {erro && <p className="mb-2 text-xs text-rust">{erro}</p>}
 
       {mostrarSeletor && (
         <div className="mb-3 rounded-sm border border-border bg-surface p-3">

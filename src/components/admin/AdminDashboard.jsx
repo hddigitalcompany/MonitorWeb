@@ -1270,11 +1270,6 @@ const TIPOS_CONVERSA_DEMO = [
   { id: "grupo", label: "Conversa em grupo" },
 ];
 
-// Opções do seletor rápido de "que dia essa conversa aparece pro
-// cliente" — Dia 1 é assim que a conta é criada, Dia 2 é 24h depois, e
-// por aí vai (a contagem é sempre em horas desde a criação da conta).
-const OPCOES_DIA_LIBERACAO_CONVERSA = Array.from({ length: 14 }, (_, i) => ({ dia: i + 1, horas: i * 24 }));
-
 function SecaoConversasDemo({ itens: itensIniciais }) {
   const [conversas, setConversas] = useState(itensIniciais);
   const [tipo, setTipo] = useState("normal");
@@ -1948,19 +1943,24 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
                     </div>
                     <p className="text-[11px] text-muted">{c.total_mensagens} mensagens · você é {c.participante_voce}</p>
                     <div className="mt-1 flex items-center gap-1.5">
-                      <label className="text-[11px] text-muted">Aparece a partir de:</label>
-                      <select
-                        value={c.horas_liberacao || 0}
-                        onChange={(e) => mudarHorasLiberacao(c, parseInt(e.target.value, 10))}
+                      <label className="text-[11px] text-muted">Aparece depois de quantas horas de conta criada:</label>
+                      <input
+                        key={`${c.id}-${c.horas_liberacao || 0}`}
+                        type="number"
+                        min="0"
+                        step="1"
+                        defaultValue={c.horas_liberacao || 0}
                         onClick={(e) => e.stopPropagation()}
-                        className="rounded-sm border border-border bg-surface px-1 py-0.5 text-[11px] text-ink"
-                      >
-                        {OPCOES_DIA_LIBERACAO_CONVERSA.map((o) => (
-                          <option key={o.dia} value={o.horas}>
-                            Dia {o.dia}
-                          </option>
-                        ))}
-                      </select>
+                        onBlur={(e) => {
+                          const horas = parseInt(e.target.value, 10);
+                          if (!Number.isNaN(horas) && horas >= 0 && horas !== (c.horas_liberacao || 0)) {
+                            mudarHorasLiberacao(c, horas);
+                          }
+                        }}
+                        onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+                        className="w-16 rounded-sm border border-border bg-surface px-1.5 py-0.5 text-[11px] text-ink"
+                      />
+                      <span className="text-[11px] text-muted">h</span>
                     </div>
                   </div>
                 </div>
