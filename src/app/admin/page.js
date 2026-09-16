@@ -60,6 +60,22 @@ async function buscarEventosVisita(supabase, idsAdmins, desde) {
   }
 }
 
+async function buscarVisitasLogin(supabase, desde) {
+  try {
+    const { data, error } = await supabase
+      .from("visitas_login")
+      .select("id, visitante_id, criado_em")
+      .gte("criado_em", desde)
+      .order("criado_em", { ascending: true })
+      .limit(20000);
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error("[admin/painel] erro ao buscar visitas de login:", err?.message || err);
+    return [];
+  }
+}
+
 export default async function AdminPage() {
   const supabase = createClient();
   const {
@@ -107,6 +123,7 @@ export default async function AdminPage() {
     conversasDemo,
     { clientes, mapaUsuarios, erroConfig },
     eventosVisita,
+    visitasLogin,
   ] = await Promise.all([
     supabase.from("conteudo_fotos").select("*").order("criado_em", { ascending: false }),
     supabase.from("conteudo_video_conversas").select("*").order("criado_em", { ascending: false }),
@@ -126,6 +143,7 @@ export default async function AdminPage() {
     supabase.from("conversas_demo").select("*").order("criado_em", { ascending: false }),
     buscarClientesEUsuarios(supabase, idsAdmins),
     buscarEventosVisita(supabase, idsAdmins, desde32Dias),
+    buscarVisitasLogin(supabase, desde32Dias),
   ]);
 
   const reembolsos = (pedidosReembolso.data || []).map((p) => {
@@ -176,6 +194,7 @@ export default async function AdminPage() {
         erroClientes: erroConfig,
         reembolsos,
         eventosVisita,
+        visitasLogin,
         idsAdmins,
         conversasDemo: conversasDemo.data || [],
       }}

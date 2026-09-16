@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { buscarTextos, texto } from "@/lib/textos";
 import LoginButton from "@/components/LoginButton";
 import EntrarComEmail from "@/components/EntrarComEmail";
+import RegistrarVisitaLogin from "@/components/RegistrarVisitaLogin";
 
 export default async function LoginPage({ searchParams }) {
   const supabase = createClient();
@@ -10,6 +11,7 @@ export default async function LoginPage({ searchParams }) {
 
   return (
     <main className="flex min-h-screen items-center justify-center px-6">
+      <RegistrarVisitaLogin />
       <div className="w-full max-w-sm">
         <div className="mb-10 text-center">
           <p className="mb-2 text-sm tracking-wide text-muted">{texto(textos, "login_selo")}</p>

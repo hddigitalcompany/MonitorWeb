@@ -25,7 +25,7 @@ import {
 import { extrairIdYoutube } from "@/lib/youtube";
 import { TEXTOS_PADRAO } from "@/lib/textos";
 import { calcularEtapaReembolso } from "@/lib/reembolso";
-import { formatarHora, tempoRelativo } from "@/lib/tempo";
+import { formatarHora, tempoRelativo, formatarDataHoraCompleta } from "@/lib/tempo";
 import { formatarTelefone } from "@/lib/telefone";
 import { parseWhatsAppTxt, remetentesUnicos } from "@/lib/whatsapp";
 import ConversaBolhas from "@/components/ConversaBolhas";
@@ -83,6 +83,7 @@ export default function AdminDashboard({ dadosIniciais }) {
         {secao === "painel" && (
           <PainelAoVivo
             eventosIniciais={dadosIniciais.eventosVisita}
+            visitasLoginIniciais={dadosIniciais.visitasLogin}
             clientes={dadosIniciais.clientes}
             idsAdmins={dadosIniciais.idsAdmins}
             erroContas={dadosIniciais.erroClientes}
@@ -1057,7 +1058,7 @@ const ORDENACOES_CLIENTES = [
 
 function SecaoClientes({ itens, erroConfig }) {
   const [clientes, setClientes] = useState(itens);
-  const [ordenacao, setOrdenacao] = useState("nome");
+  const [ordenacao, setOrdenacao] = useState("criado_recente");
 
   const clientesOrdenados = useMemo(() => {
     const lista = [...clientes];
@@ -1214,7 +1215,9 @@ function ClienteCard({ cliente, onRemovido }) {
           <p className="truncate text-xs text-muted">{cliente.email}</p>
         </div>
       </div>
-      <p className="mt-2 text-[11px] text-muted">Entrou em {cliente.criadoEm}</p>
+      <p className="mt-2 text-[11px] text-muted">
+        Entrou em {cliente.criadoEmIso ? formatarDataHoraCompleta(cliente.criadoEmIso) : cliente.criadoEm}
+      </p>
       <p className="text-[11px] text-muted">
         {cliente.ultimoAcessoIso ? `Último acesso ${tempoRelativo(cliente.ultimoAcessoIso)}` : "Nunca acessou o app"}
       </p>

@@ -64,9 +64,18 @@ function diaDaSemana({ ano, mes, dia }) {
   return new Date(Date.UTC(ano, mes - 1, dia)).getUTCDay(); // 0 = domingo
 }
 
-export default function PainelAoVivo({ eventosIniciais = [], clientes = [], idsAdmins = [], erroContas = false }) {
+export default function PainelAoVivo({
+  eventosIniciais = [],
+  visitasLoginIniciais = [],
+  clientes = [],
+  idsAdmins = [],
+  erroContas = false,
+}) {
   const [eventos, setEventos] = useState(() =>
     eventosIniciais.map((e) => ({ ...e, criado_em: new Date(e.criado_em) }))
+  );
+  const [visitasLogin, setVisitasLogin] = useState(() =>
+    visitasLoginIniciais.map((v) => ({ ...v, criado_em: new Date(v.criado_em) }))
   );
   const [contasLive, setContasLive] = useState([]);
   const [agora, setAgora] = useState(() => new Date());
@@ -99,6 +108,13 @@ export default function PainelAoVivo({ eventosIniciais = [], clientes = [], idsA
         ({ new: novo }) => {
           if (idsAdminsSet.has(novo.user_id)) return;
           setContasLive((atuais) => [...atuais, { id: novo.user_id, criadoEmIso: novo.primeiro_login }]);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "visitas_login" },
+        ({ new: novo }) => {
+          setVisitasLogin((atuais) => [...atuais, { ...novo, criado_em: new Date(novo.criado_em) }]);
         }
       )
       .subscribe();
@@ -187,6 +203,31 @@ export default function PainelAoVivo({ eventosIniciais = [], clientes = [], idsA
       mes: contarContas((c) => c.chaveDia >= chaveInicioMes && c.chaveDia <= chaveHoje),
     };
 
+    // "Desistiu" = pessoa diferente (contada pelo id salvo no navegador
+    // dela) que chegou na tela de entrar/criar conta naquele período, sem
+    // que o número de contas novas criadas nesse mesmo período alcance
+    // esse tanto de gente — uma aproximação (não dá pra saber com certeza
+    // QUEM desistiu), mas dá a ideia de quanto está vazando ali.
+    const visitasLoginComChave = visitasLogin.map((v) => ({
+      visitanteId: v.visitante_id,
+      chaveDia: chaveDia(diaDeData(v.criado_em)),
+    }));
+    function contarVisitantesLogin(filtro) {
+      return new Set(visitasLoginComChave.filter(filtro).map((v) => v.visitanteId)).size;
+    }
+    const visitantesLogin = {
+      hoje: contarVisitantesLogin((v) => v.chaveDia === chaveHoje),
+      ontem: contarVisitantesLogin((v) => v.chaveDia === chaveOntem),
+      semana: contarVisitantesLogin((v) => v.chaveDia >= chaveInicioSemana && v.chaveDia <= chaveHoje),
+      mes: contarVisitantesLogin((v) => v.chaveDia >= chaveInicioMes && v.chaveDia <= chaveHoje),
+    };
+    const desistiramLogin = {
+      hoje: Math.max(0, visitantesLogin.hoje - contasNovas.hoje),
+      ontem: Math.max(0, visitantesLogin.ontem - contasNovas.ontem),
+      semana: Math.max(0, visitantesLogin.semana - contasNovas.semana),
+      mes: Math.max(0, visitantesLogin.mes - contasNovas.mes),
+    };
+
     return {
       agoraCount,
       hoje,
@@ -204,8 +245,10 @@ export default function PainelAoVivo({ eventosIniciais = [], clientes = [], idsA
       maxBucket,
       mediaDiasAtivos,
       usuariosAtivos30,
+      desistiramLogin,
+      temVisitasLogin: visitasLogin.length > 0,
     };
-  }, [eventos, contasLive, clientes, agora]);
+  }, [eventos, contasLive, clientes, visitasLogin, agora]);
 
   return (
     <div>
@@ -238,6 +281,20 @@ export default function PainelAoVivo({ eventosIniciais = [], clientes = [], idsA
           <MiniStat titulo="Ontem" valor={dados.contasNovas.ontem} />
           <MiniStat titulo="Semana" valor={dados.contasNovas.semana} />
           <MiniStat titulo="Mês" valor={dados.contasNovas.mes} />
+        </div>
+      )}
+
+      <p className="mb-2 text-xs text-muted">Chegaram na tela de entrar mas não criaram conta</p>
+      {!dados.temVisitasLogin ? (
+        <p className="mb-6 text-xs text-muted">
+          Ainda sem visitas registradas nessa tela (só conta a partir de agora).
+        </p>
+      ) : (
+        <div className="mb-6 grid grid-cols-4 gap-2">
+          <MiniStat titulo="Hoje" valor={dados.desistiramLogin.hoje} />
+          <MiniStat titulo="Ontem" valor={dados.desistiramLogin.ontem} />
+          <MiniStat titulo="Semana" valor={dados.desistiramLogin.semana} />
+          <MiniStat titulo="Mês" valor={dados.desistiramLogin.mes} />
         </div>
       )}
 

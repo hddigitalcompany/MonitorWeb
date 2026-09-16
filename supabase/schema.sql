@@ -709,3 +709,39 @@ create policy "Participante envia mensagem"
     remetente_id = auth.uid()
     and public.eh_participante_conversa(conversa_id, auth.uid())
   );
+
+-- ============================================================
+-- VISITAS ANÔNIMAS NA TELA DE ENTRAR/CRIAR CONTA: registra quem chega
+-- até a tela de login mesmo sem ainda ter feito login (por isso não
+-- tem user_id, só um id aleatório gerado no navegador da pessoa,
+-- guardado ali pra reconhecer visitas repetidas da mesma pessoa). É o
+-- que alimenta, no Painel ao vivo, "quantas pessoas chegam até aqui
+-- mas desistem sem criar a conta".
+-- ============================================================
+
+create table if not exists public.visitas_login (
+  id bigint generated always as identity primary key,
+  visitante_id uuid not null,
+  criado_em timestamptz not null default now()
+);
+
+create index if not exists visitas_login_criado_em_idx on public.visitas_login (criado_em desc);
+create index if not exists visitas_login_visitante_id_idx on public.visitas_login (visitante_id);
+
+alter table public.visitas_login enable row level security;
+
+drop policy if exists "Qualquer um registra a própria visita" on public.visitas_login;
+create policy "Qualquer um registra a própria visita"
+  on public.visitas_login for insert
+  with check (true);
+
+drop policy if exists "Admin vê todas as visitas de login" on public.visitas_login;
+create policy "Admin vê todas as visitas de login"
+  on public.visitas_login for select
+  using (exists (select 1 from public.admins where user_id = auth.uid()));
+
+do $$
+begin
+  alter publication supabase_realtime add table public.visitas_login;
+exception when duplicate_object then null;
+end $$;

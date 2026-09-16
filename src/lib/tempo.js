@@ -20,6 +20,20 @@ export function formatarDataHora(data) {
   return `${dataTxt} ${horaTxt}`;
 }
 
+// "dd/mm/aaaa hh:mm", já no fuso do Brasil — usado onde o ano importa (ex:
+// data de criação da conta do cliente, na aba Clientes do admin).
+export function formatarDataHoraCompleta(data) {
+  const d = new Date(data);
+  const dataTxt = d.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: FUSO_BR,
+  });
+  const horaTxt = formatarHora(d);
+  return `${dataTxt} ${horaTxt}`;
+}
+
 export function tempoRelativo(data) {
   const diffMs = Date.now() - new Date(data).getTime();
   const diffMin = Math.max(0, Math.round(diffMs / 60000));
