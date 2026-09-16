@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { MessageCircle, Users, Send, Plus, Search } from "lucide-react";
+import { texto } from "@/lib/textos";
 
 const EMOJIS_RAPIDOS = ["😀", "😂", "❤️", "👍", "🙏", "😊", "😢", "🎉"];
 
@@ -11,7 +12,7 @@ const EMOJIS_RAPIDOS = ["😀", "😂", "❤️", "👍", "🙏", "😊", "😢"
 // verdade com elas em tempo real. Diferente das "conversas de exemplo"
 // (ConversasDemo.jsx), que são roteiros prontos criados pelo admin —
 // aqui quem escreve é o próprio cliente, dos dois lados.
-export default function ConversasReais({ userId }) {
+export default function ConversasReais({ userId, textos }) {
   const [conversas, setConversas] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [mostrarSeletor, setMostrarSeletor] = useState(false);
@@ -223,9 +224,9 @@ export default function ConversasReais({ userId }) {
   return (
     <div className="mb-6">
       <div className="mb-2 flex items-center justify-between">
-        <p className="text-xs text-muted">Conversas</p>
+        <p className="text-xs text-muted">{texto(textos, "conversas_reais_titulo")}</p>
         <button onClick={abrirSeletor} className="flex items-center gap-1 text-xs text-ink">
-          <Plus size={14} /> Nova conversa
+          <Plus size={14} /> {texto(textos, "conversas_reais_botao_nova")}
         </button>
       </div>
 
@@ -282,7 +283,7 @@ export default function ConversasReais({ userId }) {
       {carregando ? (
         <p className="text-sm text-muted">Carregando conversas...</p>
       ) : conversas.length === 0 ? (
-        <p className="text-sm text-muted">Você ainda não tem nenhuma conversa. Toque em "Nova conversa" pra começar.</p>
+        <p className="text-sm text-muted">{texto(textos, "conversas_reais_vazio")}</p>
       ) : (
         <div className="flex flex-col gap-2">
           {conversas.map((c) => (

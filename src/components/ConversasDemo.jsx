@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { MessageCircle, Users, Send } from "lucide-react";
 import ConversaBolhas from "@/components/ConversaBolhas";
 import { quantidadeVisivelConversa } from "@/lib/liberacaoConversa";
+import { texto } from "@/lib/textos";
 
 const EMOJIS_RAPIDOS = ["😀", "😂", "❤️", "👍", "🙏", "😊", "😢", "🎉"];
 
@@ -14,7 +15,7 @@ const EMOJIS_RAPIDOS = ["😀", "😂", "❤️", "👍", "🙏", "😊", "😢"
 // mesma (entra do lado direito, junto com as mensagens dela). O que ela
 // escreve fica salvo só pra ela — outro cliente que abrir essa mesma
 // conversa de exemplo não vê.
-export default function ConversasDemo({ conversas, userId }) {
+export default function ConversasDemo({ conversas, userId, textos }) {
   const [abertaId, setAbertaId] = useState(null);
   const [mensagensPorConversa, setMensagensPorConversa] = useState({});
   const [carregandoId, setCarregandoId] = useState(null);
@@ -177,7 +178,7 @@ export default function ConversasDemo({ conversas, userId }) {
 
   return (
     <div className="mb-6">
-      <p className="mb-2 text-xs text-muted">Conversas de exemplo</p>
+      <p className="mb-2 text-xs text-muted">{texto(textos, "conversas_demo_titulo")}</p>
       <div className="flex flex-col gap-2">
         {conversas.map((c) => (
           <div key={c.id} className="rounded-sm border border-border bg-surface p-3">

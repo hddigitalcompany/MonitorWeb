@@ -909,7 +909,14 @@ const GRUPOS_TEXTOS = [
   {
     titulo: "Conversas",
     icon: MessageCircle,
-    campos: [["conversas_titulo", "Título"], ["conversas_subtitulo", "Subtítulo"]],
+    campos: [
+      ["conversas_titulo", "Título"],
+      ["conversas_subtitulo", "Subtítulo"],
+      ["conversas_reais_titulo", "Rótulo da lista de conversas de verdade"],
+      ["conversas_reais_botao_nova", "Botão de nova conversa"],
+      ["conversas_reais_vazio", "Texto de lista vazia (conversas de verdade)"],
+      ["conversas_demo_titulo", "Rótulo da lista de conversas de exemplo"],
+    ],
   },
   {
     titulo: "Assinatura",
