@@ -641,3 +641,71 @@ alter table public.conversas_demo add column if not exists liberacao_intervalo_r
 -- ============================================================
 
 alter table public.conversas_demo add column if not exists horas_liberacao integer not null default 0;
+
+-- ============================================================
+-- CORRIGE RECURSÃO INFINITA NA RLS DE conversas_reais_participantes:
+-- as políticas de select e insert dessa tabela consultavam ela mesma
+-- (um "exists (select ... from conversas_reais_participantes ...)"
+-- dentro da política da própria conversas_reais_participantes), o que
+-- faz o Postgres reavaliar a mesma política dentro da subconsulta,
+-- travando em "infinite recursion detected in policy" (42P17) e
+-- quebrando toda a tela de Conversas (a conversa nova nunca chegava a
+-- ser criada de verdade, e a lista simplesmente não carregava).
+--
+-- A correção: uma função "security definer" consulta a tabela sem
+-- reacionar a RLS dela (roda com privilégio do dono da função), e as
+-- políticas passam a chamar essa função em vez de fazer a subconsulta
+-- direto na própria tabela.
+-- ============================================================
+
+create or replace function public.eh_participante_conversa(p_conversa_id uuid, p_user_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1
+    from public.conversas_reais_participantes
+    where conversa_id = p_conversa_id and user_id = p_user_id
+  );
+$$;
+
+grant execute on function public.eh_participante_conversa(uuid, uuid) to authenticated;
+
+drop policy if exists "Participante vê a conversa" on public.conversas_reais;
+create policy "Participante vê a conversa"
+  on public.conversas_reais for select
+  using (public.eh_participante_conversa(id, auth.uid()));
+
+drop policy if exists "Participante atualiza a conversa" on public.conversas_reais;
+create policy "Participante atualiza a conversa"
+  on public.conversas_reais for update
+  using (public.eh_participante_conversa(id, auth.uid()));
+
+drop policy if exists "Vê participantes das suas conversas" on public.conversas_reais_participantes;
+create policy "Vê participantes das suas conversas"
+  on public.conversas_reais_participantes for select
+  using (public.eh_participante_conversa(conversa_id, auth.uid()));
+
+drop policy if exists "Entra na conversa que cria ou já participa" on public.conversas_reais_participantes;
+create policy "Entra na conversa que cria ou já participa"
+  on public.conversas_reais_participantes for insert
+  with check (
+    user_id = auth.uid()
+    or public.eh_participante_conversa(conversa_id, auth.uid())
+  );
+
+drop policy if exists "Participante lê mensagens da conversa" on public.mensagens_reais;
+create policy "Participante lê mensagens da conversa"
+  on public.mensagens_reais for select
+  using (public.eh_participante_conversa(conversa_id, auth.uid()));
+
+drop policy if exists "Participante envia mensagem" on public.mensagens_reais;
+create policy "Participante envia mensagem"
+  on public.mensagens_reais for insert
+  with check (
+    remetente_id = auth.uid()
+    and public.eh_participante_conversa(conversa_id, auth.uid())
+  );
