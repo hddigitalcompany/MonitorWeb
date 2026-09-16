@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { MessageCircle, Users, Send } from "lucide-react";
 import ConversaBolhas from "@/components/ConversaBolhas";
+import { quantidadeVisivelConversa } from "@/lib/liberacaoConversa";
 
 const EMOJIS_RAPIDOS = ["😀", "😂", "❤️", "👍", "🙏", "😊", "😢", "🎉"];
 
@@ -19,19 +20,82 @@ export default function ConversasDemo({ conversas, userId }) {
   const [carregandoId, setCarregandoId] = useState(null);
   const [rascunho, setRascunho] = useState("");
   const [enviando, setEnviando] = useState(false);
-  const [aberturaPorConversa, setAberturaPorConversa] = useState({});
+  const [progressoPorConversa, setProgressoPorConversa] = useState({});
   const [, forcarAtualizacao] = useState(0);
   const supabase = createClient();
 
-  // Enquanto tiver uma conversa com liberação gradual aberta, atualiza a
-  // tela de tempos em tempos pra novas mensagens antigas irem aparecendo
-  // sozinhas, sem precisar fechar e abrir a conversa de novo.
+  // Busca de uma vez o progresso da pessoa em todas as conversas de
+  // exemplo (quando abriu cada uma pela primeira vez e quantas
+  // mensagens já leu) — é isso que alimenta o balãozinho de mensagens
+  // não vistas na lista, sem precisar abrir cada conversa antes.
   useEffect(() => {
-    const conversaAberta = conversas.find((c) => c.id === abertaId);
-    if (!conversaAberta?.liberacao_intervalo_minutos) return;
+    supabase
+      .from("conversas_demo_progresso")
+      .select("*")
+      .eq("user_id", userId)
+      .then(({ data }) => {
+        const mapa = {};
+        (data || []).forEach((p) => {
+          mapa[p.conversa_id] = p;
+        });
+        setProgressoPorConversa(mapa);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Enquanto tiver alguma conversa com liberação gradual, atualiza a
+  // tela de tempos em tempos pra os balõezinhos e as mensagens antigas
+  // irem aparecendo sozinhos, sem precisar recarregar a página.
+  useEffect(() => {
+    if (!conversas.some((c) => c.liberacao_intervalo_minutos)) return;
     const id = setInterval(() => forcarAtualizacao((t) => t + 1), 30000);
     return () => clearInterval(id);
-  }, [abertaId, conversas]);
+  }, [conversas]);
+
+  function naoLidas(conversa) {
+    const progresso = progressoPorConversa[conversa.id];
+    const visivelAgora = quantidadeVisivelConversa({
+      liberacaoIntervaloMinutos: conversa.liberacao_intervalo_minutos,
+      liberacaoQuantidadeInicial: conversa.liberacao_quantidade_inicial,
+      primeiraAbertura: progresso?.primeira_abertura,
+      totalRoteiro: conversa.total_mensagens,
+    });
+    const lidas = progresso?.mensagens_lidas || 0;
+    return Math.max(0, visivelAgora - lidas);
+  }
+
+  async function marcarComoLida(conversa, todasMensagens) {
+    const doRoteiro = todasMensagens.filter((m) => m.user_id == null);
+    let progresso = progressoPorConversa[conversa.id];
+
+    if (!progresso) {
+      const agora = new Date().toISOString();
+      await supabase
+        .from("conversas_demo_progresso")
+        .insert({ conversa_id: conversa.id, user_id: userId, primeira_abertura: agora });
+      progresso = { conversa_id: conversa.id, user_id: userId, primeira_abertura: agora, mensagens_lidas: 0 };
+    }
+
+    const visivelAgora = quantidadeVisivelConversa({
+      liberacaoIntervaloMinutos: conversa.liberacao_intervalo_minutos,
+      liberacaoQuantidadeInicial: conversa.liberacao_quantidade_inicial,
+      primeiraAbertura: progresso.primeira_abertura,
+      totalRoteiro: doRoteiro.length,
+    });
+
+    if (visivelAgora !== progresso.mensagens_lidas) {
+      await supabase
+        .from("conversas_demo_progresso")
+        .update({ mensagens_lidas: visivelAgora })
+        .eq("conversa_id", conversa.id)
+        .eq("user_id", userId);
+    }
+
+    setProgressoPorConversa((atual) => ({
+      ...atual,
+      [conversa.id]: { ...progresso, mensagens_lidas: visivelAgora },
+    }));
+  }
 
   async function abrir(conversa) {
     if (abertaId === conversa.id) {
@@ -41,38 +105,21 @@ export default function ConversasDemo({ conversas, userId }) {
     setAbertaId(conversa.id);
     setRascunho("");
 
-    if (conversa.liberacao_intervalo_minutos && !aberturaPorConversa[conversa.id]) {
-      const { data: progresso } = await supabase
-        .from("conversas_demo_progresso")
-        .select("primeira_abertura")
+    let mensagens = mensagensPorConversa[conversa.id];
+    if (!mensagens) {
+      setCarregandoId(conversa.id);
+      const { data } = await supabase
+        .from("mensagens_demo")
+        .select("*")
         .eq("conversa_id", conversa.id)
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      let primeiraAbertura = progresso?.primeira_abertura;
-      if (!primeiraAbertura) {
-        primeiraAbertura = new Date().toISOString();
-        await supabase
-          .from("conversas_demo_progresso")
-          .insert({ conversa_id: conversa.id, user_id: userId, primeira_abertura: primeiraAbertura });
-      }
-      setAberturaPorConversa((atual) => ({ ...atual, [conversa.id]: primeiraAbertura }));
+        .order("ordem", { ascending: true, nullsFirst: false })
+        .order("criado_em", { ascending: true });
+      mensagens = (data || []).map((m) => ({ ...m, dataHoraIso: m.enviado_em }));
+      setMensagensPorConversa((atual) => ({ ...atual, [conversa.id]: mensagens }));
+      setCarregandoId(null);
     }
 
-    if (mensagensPorConversa[conversa.id]) return;
-
-    setCarregandoId(conversa.id);
-    const { data } = await supabase
-      .from("mensagens_demo")
-      .select("*")
-      .eq("conversa_id", conversa.id)
-      .order("ordem", { ascending: true, nullsFirst: false })
-      .order("criado_em", { ascending: true });
-    setMensagensPorConversa((atual) => ({
-      ...atual,
-      [conversa.id]: (data || []).map((m) => ({ ...m, dataHoraIso: m.enviado_em })),
-    }));
-    setCarregandoId(null);
+    marcarComoLida(conversa, mensagens);
   }
 
   // Se a conversa tiver liberação gradual, mostra só uma parte das
@@ -82,15 +129,16 @@ export default function ConversasDemo({ conversas, userId }) {
   // pessoa escreveu continuando a conversa sempre aparecem.
   function mensagensVisiveis(conversa) {
     const todas = mensagensPorConversa[conversa.id] || [];
-    const intervalo = conversa.liberacao_intervalo_minutos;
-    const abertura = aberturaPorConversa[conversa.id];
-    if (!intervalo || intervalo <= 0 || !abertura) return { visiveis: todas, faltam: 0 };
-
     const doRoteiro = todas.filter((m) => m.user_id == null);
     const proprias = todas.filter((m) => m.user_id != null);
-    const inicial = conversa.liberacao_quantidade_inicial != null ? conversa.liberacao_quantidade_inicial : 1;
-    const minutosPassados = (Date.now() - new Date(abertura).getTime()) / 60000;
-    const quantidade = Math.min(doRoteiro.length, inicial + Math.floor(minutosPassados / intervalo));
+    const progresso = progressoPorConversa[conversa.id];
+
+    const quantidade = quantidadeVisivelConversa({
+      liberacaoIntervaloMinutos: conversa.liberacao_intervalo_minutos,
+      liberacaoQuantidadeInicial: conversa.liberacao_quantidade_inicial,
+      primeiraAbertura: progresso?.primeira_abertura,
+      totalRoteiro: doRoteiro.length,
+    });
 
     return { visiveis: [...doRoteiro.slice(0, quantidade), ...proprias], faltam: doRoteiro.length - quantidade };
   }
@@ -147,6 +195,11 @@ export default function ConversasDemo({ conversas, userId }) {
                 <p className="truncate text-sm text-ink">{c.titulo}</p>
                 <p className="text-[11px] text-muted">{c.total_mensagens} mensagens</p>
               </div>
+              {abertaId !== c.id && naoLidas(c) > 0 && (
+                <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-amber px-1.5 text-[11px] font-semibold text-ink">
+                  {naoLidas(c)}
+                </span>
+              )}
             </button>
             {abertaId === c.id && (
               <div className="mt-3">

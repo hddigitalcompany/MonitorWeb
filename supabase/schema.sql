@@ -595,3 +595,9 @@ alter publication supabase_realtime add table public.mensagens_reais;
 -- abre a conversa pela primeira vez (antes de começar a contar o
 -- intervalo de liberação das próximas). Vazio = considera 1.
 alter table public.conversas_demo add column if not exists liberacao_quantidade_inicial integer;
+
+-- Quantas mensagens (do roteiro, já visíveis pra essa pessoa) ela já
+-- viu da última vez que abriu a conversa — usado pra calcular o
+-- balãozinho de mensagens não vistas na lista, sem precisar abrir cada
+-- conversa antes.
+alter table public.conversas_demo_progresso add column if not exists mensagens_lidas integer not null default 0;
