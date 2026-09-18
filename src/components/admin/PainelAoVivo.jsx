@@ -79,6 +79,7 @@ export default function PainelAoVivo({
   );
   const [contasLive, setContasLive] = useState([]);
   const [agora, setAgora] = useState(() => new Date());
+  const [horaSelecionada, setHoraSelecionada] = useState(null);
 
   // Relógio próprio: mesmo sem nenhuma visita nova chegando, os números por
   // tempo (tipo "agora" e a virada do dia) precisam continuar corretos.
@@ -325,15 +326,29 @@ export default function PainelAoVivo({
       <div className="mb-6 rounded-sm border border-border bg-surface p-3">
         {dados.temEventos30 ? (
           <>
-            <p className="mb-2 text-sm text-ink">
-              Pico às <span className="font-extrabold">{String(dados.horaPico).padStart(2, "0")}h</span>
-            </p>
+            {(() => {
+              const horaEmFoco = horaSelecionada ?? dados.horaPico;
+              const qtdEmFoco = dados.contagemHora[horaEmFoco] || 0;
+              return (
+                <p className="mb-2 text-sm text-ink">
+                  {horaSelecionada === null ? "Pico às " : "às "}
+                  <span className="font-extrabold">{String(horaEmFoco).padStart(2, "0")}h</span>
+                  {" — "}
+                  <span className="font-extrabold">{qtdEmFoco}</span>{" "}
+                  {qtdEmFoco === 1 ? "acesso" : "acessos"}
+                </p>
+              );
+            })()}
             <div className="flex h-16 items-end gap-[2px]">
               {dados.contagemHora.map((q, h) => (
-                <div
+                <button
                   key={h}
+                  type="button"
                   title={`${h}h: ${q}`}
-                  className={`flex-1 rounded-t-sm ${h === dados.horaPico ? "bg-amber" : "bg-surface2"}`}
+                  onClick={() => setHoraSelecionada((atual) => (atual === h ? null : h))}
+                  className={`flex-1 rounded-t-sm transition-colors ${
+                    h === (horaSelecionada ?? dados.horaPico) ? "bg-amber" : "bg-surface2 hover:bg-amber/40"
+                  }`}
                   style={{ height: `${Math.max(4, (q / dados.maxHora) * 100)}%` }}
                 />
               ))}
