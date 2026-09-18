@@ -961,6 +961,7 @@ const GRUPOS_TEXTOS = [
     campos: [
       ["carregando_titulo", "Título grande no topo da tela de carregamento"],
       ["carregando_pergunta", "Pergunta de confirmação do telefone"],
+      ["carregando_subtitulo", "Subtítulo abaixo da pergunta"],
       ["carregando_botao_sim", "Botão: está certo"],
       ["carregando_botao_nao", "Botão: corrigir"],
       ["carregando_botao_editar_salvar", "Botão: salvar telefone corrigido"],

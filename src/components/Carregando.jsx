@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { apenasDigitos, formatarTelefone, formatarTelefoneParcial } from "@/lib/telefone";
 import { texto } from "@/lib/textos";
-import { Check, Loader2 } from "lucide-react";
+import { BadgeCheck, Check, Loader2 } from "lucide-react";
 
 // Roda toda vez que a pessoa entra (depois do login, ou depois de
 // completar o cadastro): mostra as etapas configuradas no admin uma
@@ -178,10 +178,20 @@ export default function Carregando({
       )}
 
       {fase === "confirmando" && (
-        <div className="flex flex-col items-center gap-4 text-center">
-          <p className="font-bold text-lg text-ink">{t("carregando_pergunta")}</p>
-          <p className="font-extrabold tracking-tight text-2xl text-ink">{formatarTelefone(telefoneAtual)}</p>
-          <div className="mt-2 flex w-full gap-2">
+        <div className="w-full rounded-[1.75rem] bg-surface p-6 text-center shadow-xl">
+          <div className="relative mx-auto mb-5 flex h-16 w-16 items-center justify-center">
+            <div className="absolute inset-0 rounded-full bg-olive/30 blur-xl" />
+            <BadgeCheck size={64} strokeWidth={1.5} className="relative text-olive" />
+          </div>
+
+          <p className="text-xl font-extrabold text-ink">{t("carregando_pergunta")}</p>
+          <p className="mx-auto mt-1.5 max-w-[15rem] text-sm text-muted">{t("carregando_subtitulo")}</p>
+
+          <div className="mx-auto mt-4 inline-block rounded-full border border-border bg-surface2 px-4 py-2 text-lg font-bold tracking-tight text-ink">
+            {formatarTelefone(telefoneAtual)}
+          </div>
+
+          <div className="mt-6 flex w-full gap-2">
             <button
               onClick={comecarEdicao}
               disabled={salvando}

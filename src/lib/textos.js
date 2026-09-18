@@ -50,6 +50,7 @@ export const TEXTOS_PADRAO = {
   completar_botao_salvando: "Salvando...",
   carregando_titulo: "Quase lá!",
   carregando_pergunta: "Esse é o seu número de telefone?",
+  carregando_subtitulo: "Confira se esse é o número certo pra gente continuar.",
   carregando_botao_sim: "Sim, está certo",
   carregando_botao_nao: "Não, corrigir",
   carregando_botao_editar_salvar: "Salvar e continuar",
