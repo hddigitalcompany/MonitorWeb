@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { apenasDigitos, formatarTelefone, formatarTelefoneParcial } from "@/lib/telefone";
@@ -31,6 +31,7 @@ export default function Carregando({
   const [telefoneEdicao, setTelefoneEdicao] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [etapaConcluida, setEtapaConcluida] = useState(false);
+  const etapasScrollRef = useRef(null);
 
   useEffect(() => {
     if (fase !== "animando") return;
@@ -57,6 +58,12 @@ export default function Carregando({
     }
     return () => timers.forEach(clearTimeout);
   }, [passo, fase, etapas, telefoneConfirmado, preview, router]);
+
+  useEffect(() => {
+    if (fase !== "animando") return;
+    const ativo = etapasScrollRef.current?.querySelector('[data-etapa-ativa="true"]');
+    ativo?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [passo, fase]);
 
   async function confirmarCorreto() {
     setSalvando(true);
@@ -139,7 +146,7 @@ export default function Carregando({
               <span className="absolute left-1/2 top-full -mt-1.5 h-3 w-3 -translate-x-1/2 rotate-45 border-b border-r border-border bg-surface2" />
             </div>
 
-            <div className="flex w-full items-start">
+            <div ref={etapasScrollRef} className="flex items-start overflow-x-auto pb-2">
               {etapas.map((etapa, i) => {
                 const feito = i < passo;
                 const ativo = i === passo;
@@ -149,7 +156,10 @@ export default function Carregando({
                 const proximaAtiva = i + 1 === passo;
                 return (
                   <div key={etapa.id ?? i} className="contents">
-                    <div className="flex w-16 shrink-0 flex-col items-center gap-1.5 text-center">
+                    <div
+                      data-etapa-ativa={ativo ? "true" : undefined}
+                      className="flex w-16 shrink-0 flex-col items-center gap-1.5 text-center"
+                    >
                       <div
                         className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ring-4 ring-surface ${
                           estiloFeito ? "bg-olive text-white" : ativo ? "bg-amber text-ink" : "bg-surface2 text-muted"
@@ -173,7 +183,7 @@ export default function Carregando({
                     </div>
                     {i < etapas.length - 1 && (
                       <div
-                        className={`-mx-1 mt-[11px] h-2.5 flex-1 rounded-full ${
+                        className={`-mx-1 mt-[11px] h-2.5 w-8 shrink-0 rounded-full ${
                           proximaFeita
                             ? "bg-olive"
                             : proximaAtiva
