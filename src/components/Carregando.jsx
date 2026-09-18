@@ -97,39 +97,79 @@ export default function Carregando({
       <p className="mb-8 text-center text-sm text-muted">{formatarTelefone(telefoneAtual)}</p>
 
       {fase === "animando" && (
-        <div className="flex flex-col items-center gap-7">
-          <div className="relative w-full rounded-md border border-border bg-surface px-4 py-3.5 text-center shadow-sm">
-            <p className="text-sm font-medium text-ink">
-              {etapas[Math.min(passo, etapas.length - 1)]?.frase}
-            </p>
-            <span className="absolute left-1/2 top-full -mt-1.5 h-3 w-3 -translate-x-1/2 rotate-45 border-b border-r border-border bg-surface" />
+        <div className="flex flex-col items-center gap-8">
+          <div className="relative w-full">
+            <div className="absolute inset-x-6 -inset-y-2 -z-10 rounded-[2rem] bg-gradient-to-b from-border/60 to-transparent blur-xl" />
+            <div className="relative rounded-md border border-border bg-surface px-4 py-4 shadow-lg">
+              <div className="flex items-center justify-center gap-2.5">
+                <span
+                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
+                    passo >= etapas.length ? "bg-olive text-white" : "bg-amber text-ink"
+                  }`}
+                >
+                  {passo >= etapas.length ? (
+                    <Check size={13} />
+                  ) : (
+                    <Loader2 size={13} className="animate-spin" />
+                  )}
+                </span>
+                <p className="text-sm font-bold text-ink">
+                  {etapas[Math.min(passo, etapas.length - 1)]?.frase}
+                </p>
+              </div>
+              <span className="absolute left-1/2 top-full -mt-1.5 h-3 w-3 -translate-x-1/2 rotate-45 border-b border-r border-border bg-surface" />
+            </div>
           </div>
 
-          <div className="flex w-full items-center">
+          <div className="flex w-full items-start">
             {etapas.map((etapa, i) => {
               const feito = i < passo;
               const ativo = i === passo;
+              const proximaFeita = i + 1 < passo;
+              const proximaAtiva = i + 1 === passo;
               return (
-                <div key={etapa.id ?? i} className="flex flex-1 items-center last:flex-none">
-                  <div
-                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
-                      feito ? "bg-olive text-white" : ativo ? "bg-amber text-ink" : "bg-surface2 text-muted"
-                    }`}
-                  >
-                    {feito ? (
-                      <Check size={14} />
-                    ) : ativo ? (
-                      <Loader2 size={14} className="animate-spin" />
-                    ) : (
-                      i + 1
-                    )}
+                <div key={etapa.id ?? i} className="contents">
+                  <div className="flex w-16 shrink-0 flex-col items-center gap-1.5 text-center">
+                    <div
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                        feito ? "bg-olive text-white" : ativo ? "bg-amber text-ink" : "bg-surface2 text-muted"
+                      }`}
+                    >
+                      {feito ? (
+                        <Check size={14} />
+                      ) : ativo ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        i + 1
+                      )}
+                    </div>
+                    <p
+                      className={`text-[10px] font-medium leading-tight ${
+                        feito || ativo ? "text-ink" : "text-muted/60"
+                      }`}
+                    >
+                      {etapa.frase}
+                    </p>
                   </div>
                   {i < etapas.length - 1 && (
-                    <div className={`h-0.5 flex-1 ${feito ? "bg-olive" : "bg-border"}`} />
+                    <div
+                      className={`mt-4 h-1 flex-1 rounded-full ${
+                        proximaFeita
+                          ? "bg-olive"
+                          : proximaAtiva
+                          ? "bg-gradient-to-r from-olive to-amber"
+                          : "bg-border"
+                      }`}
+                    />
                   )}
                 </div>
               );
             })}
+          </div>
+
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[11px] text-muted shadow-sm">
+            <Loader2 size={11} className="animate-spin" />
+            Etapa {Math.min(passo + 1, etapas.length)} de {etapas.length}
           </div>
         </div>
       )}
