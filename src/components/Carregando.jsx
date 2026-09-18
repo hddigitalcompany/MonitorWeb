@@ -97,28 +97,40 @@ export default function Carregando({
       <p className="mb-8 text-center text-sm text-muted">{formatarTelefone(telefoneAtual)}</p>
 
       {fase === "animando" && (
-        <div className="flex flex-col gap-5">
-          {etapas.map((etapa, i) => {
-            const feito = i < passo;
-            const ativo = i === passo;
-            return (
-              <div key={etapa.id ?? i} className="flex flex-col items-center gap-2 text-center">
-                <p
-                  className={
-                    feito
-                      ? "text-sm text-muted"
-                      : ativo
-                      ? "text-sm font-medium text-ink"
-                      : "text-sm text-muted/40"
-                  }
-                >
-                  {etapa.frase}
-                </p>
-                {feito && <Check size={16} className="text-olive" />}
-                {ativo && <Loader2 size={16} className="animate-spin text-ink" />}
-              </div>
-            );
-          })}
+        <div className="flex flex-col items-center gap-7">
+          <div className="relative w-full rounded-md border border-border bg-surface px-4 py-3.5 text-center shadow-sm">
+            <p className="text-sm font-medium text-ink">
+              {etapas[Math.min(passo, etapas.length - 1)]?.frase}
+            </p>
+            <span className="absolute left-1/2 top-full -mt-1.5 h-3 w-3 -translate-x-1/2 rotate-45 border-b border-r border-border bg-surface" />
+          </div>
+
+          <div className="flex w-full items-center">
+            {etapas.map((etapa, i) => {
+              const feito = i < passo;
+              const ativo = i === passo;
+              return (
+                <div key={etapa.id ?? i} className="flex flex-1 items-center last:flex-none">
+                  <div
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
+                      feito ? "bg-olive text-white" : ativo ? "bg-amber text-ink" : "bg-surface2 text-muted"
+                    }`}
+                  >
+                    {feito ? (
+                      <Check size={14} />
+                    ) : ativo ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      i + 1
+                    )}
+                  </div>
+                  {i < etapas.length - 1 && (
+                    <div className={`h-0.5 flex-1 ${feito ? "bg-olive" : "bg-border"}`} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -127,10 +139,18 @@ export default function Carregando({
           <p className="font-bold text-lg text-ink">{t("carregando_pergunta")}</p>
           <p className="font-extrabold tracking-tight text-2xl text-ink">{formatarTelefone(telefoneAtual)}</p>
           <div className="mt-2 flex w-full gap-2">
-            <button onClick={comecarEdicao} disabled={salvando} className="btn-secondary flex-1 disabled:opacity-50">
+            <button
+              onClick={comecarEdicao}
+              disabled={salvando}
+              className="btn-secondary flex-1 rounded-full disabled:opacity-50"
+            >
               {t("carregando_botao_nao")}
             </button>
-            <button onClick={confirmarCorreto} disabled={salvando} className="btn-primary flex-1 disabled:opacity-50">
+            <button
+              onClick={confirmarCorreto}
+              disabled={salvando}
+              className="btn-primary flex-1 rounded-full disabled:opacity-50"
+            >
               {t("carregando_botao_sim")}
             </button>
           </div>
