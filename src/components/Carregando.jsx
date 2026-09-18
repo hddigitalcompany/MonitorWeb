@@ -168,7 +168,7 @@ export default function Carregando({
                           feito || ativo ? "text-ink" : "text-muted/60"
                         }`}
                       >
-                        {etapa.frase}
+                        {estiloFeito && etapa.frase_concluida?.trim() ? etapa.frase_concluida : etapa.frase}
                       </p>
                     </div>
                     {i < etapas.length - 1 && (
