@@ -121,6 +121,7 @@ export default function PainelAoVivo({
   );
   const [contasLive, setContasLive] = useState([]);
   const [agora, setAgora] = useState(() => new Date());
+  const [horaSelecionada, setHoraSelecionada] = useState(null);
 
   // Relógio próprio: mesmo sem nenhuma visita nova chegando, os números por
   // tempo (tipo "agora" e a virada do dia) precisam continuar corretos.
@@ -367,52 +368,72 @@ export default function PainelAoVivo({
       <div className="mb-6 rounded-sm border border-border bg-surface p-3">
         {dados.temEventos30 ? (
           <>
-            <p className="mb-2 text-sm text-ink">
-              Pico às <span className="font-extrabold">{String(dados.horaPico).padStart(2, "0")}h</span>
-              {" — "}
-              <span className="font-extrabold">{dados.contagemHora[dados.horaPico] || 0}</span>{" "}
-              {dados.contagemHora[dados.horaPico] === 1 ? "acesso" : "acessos"}
-            </p>
             {(() => {
+              const horaFoco = horaSelecionada ?? dados.horaPico;
+              const qtdFoco = dados.contagemHora[horaFoco] || 0;
               const pontos = pontosGraficoPico(dados.contagemHora);
-              const pontoPico = pontos[dados.horaPico];
+              const pontoFoco = pontos[horaFoco];
+              const colunaLargura = GRAFICO_PICO_LARGURA / dados.contagemHora.length;
               return (
-                <svg
-                  viewBox={`0 0 ${GRAFICO_PICO_LARGURA} ${GRAFICO_PICO_ALTURA}`}
-                  preserveAspectRatio="none"
-                  className="h-20 w-full"
-                >
-                  <defs>
-                    <linearGradient id="graficoPicoGlow" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#C6F136" stopOpacity="0.5" />
-                      <stop offset="100%" stopColor="#C6F136" stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-                  {[0, 6, 12, 18, 23].map((h) => (
-                    <line
-                      key={h}
-                      x1={pontos[h]?.x}
-                      x2={pontos[h]?.x}
-                      y1={0}
-                      y2={GRAFICO_PICO_ALTURA}
-                      stroke="#E2E1D3"
-                      strokeWidth="1"
-                      strokeDasharray="3 3"
+                <>
+                  <p className="mb-2 text-sm text-ink">
+                    {horaSelecionada === null ? "Pico às " : "às "}
+                    <span className="font-extrabold">{String(horaFoco).padStart(2, "0")}h</span>
+                    {" — "}
+                    <span className="font-extrabold">{qtdFoco}</span>{" "}
+                    {qtdFoco === 1 ? "acesso" : "acessos"}
+                  </p>
+                  <svg
+                    viewBox={`0 0 ${GRAFICO_PICO_LARGURA} ${GRAFICO_PICO_ALTURA}`}
+                    preserveAspectRatio="none"
+                    className="h-20 w-full touch-none"
+                  >
+                    <defs>
+                      <linearGradient id="graficoPicoGlow" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#C6F136" stopOpacity="0.5" />
+                        <stop offset="100%" stopColor="#C6F136" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    {[0, 6, 12, 18, 23].map((h) => (
+                      <line
+                        key={h}
+                        x1={pontos[h]?.x}
+                        x2={pontos[h]?.x}
+                        y1={0}
+                        y2={GRAFICO_PICO_ALTURA}
+                        stroke="#E2E1D3"
+                        strokeWidth="1"
+                        strokeDasharray="3 3"
+                      />
+                    ))}
+                    <path d={pathAreaSuave(pontos)} fill="url(#graficoPicoGlow)" stroke="none" />
+                    <path
+                      d={pathLinhaSuave(pontos)}
+                      fill="none"
+                      stroke="#4F6B3F"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                     />
-                  ))}
-                  <path d={pathAreaSuave(pontos)} fill="url(#graficoPicoGlow)" stroke="none" />
-                  <path
-                    d={pathLinhaSuave(pontos)}
-                    fill="none"
-                    stroke="#4F6B3F"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  {pontoPico && (
-                    <circle cx={pontoPico.x} cy={pontoPico.y} r="4.5" fill="#C6F136" stroke="#FFFFFF" strokeWidth="2.5" />
-                  )}
-                </svg>
+                    {pontoFoco && (
+                      <circle cx={pontoFoco.x} cy={pontoFoco.y} r="4.5" fill="#C6F136" stroke="#FFFFFF" strokeWidth="2.5" />
+                    )}
+                    {dados.contagemHora.map((_, h) => (
+                      <rect
+                        key={h}
+                        x={h * colunaLargura}
+                        y="0"
+                        width={colunaLargura}
+                        height={GRAFICO_PICO_ALTURA}
+                        fill="transparent"
+                        className="cursor-pointer"
+                        onClick={() => setHoraSelecionada((atual) => (atual === h ? null : h))}
+                      >
+                        <title>{`${h}h: ${dados.contagemHora[h]}`}</title>
+                      </rect>
+                    ))}
+                  </svg>
+                </>
               );
             })()}
             <div className="mt-1 flex justify-between text-[9px] text-muted">
