@@ -171,6 +171,7 @@ export default async function AdminPage() {
     pedidosReembolso,
     perfis,
     conversasDemo,
+    carregamentoEtapas,
     { clientes, mapaUsuarios, erroConfig },
     eventosVisita,
     visitasLogin,
@@ -191,6 +192,7 @@ export default async function AdminPage() {
     supabase.from("pedidos_reembolso").select("*").order("criado_em", { ascending: false }),
     supabase.from("perfis_usuario").select("user_id, ultimo_acesso, telefone"),
     supabase.from("conversas_demo").select("*").order("criado_em", { ascending: false }),
+    supabase.from("conteudo_carregamento_etapas").select("*").order("ordem", { ascending: true }),
     buscarClientesEUsuarios(supabase, idsAdmins),
     buscarEventosVisita(supabase, idsAdmins, desde32Dias),
     buscarVisitasLogin(supabase, desde32Dias),
@@ -247,6 +249,7 @@ export default async function AdminPage() {
         visitasLogin,
         idsAdmins,
         conversasDemo: conversasDemo.data || [],
+        carregamentoEtapas: carregamentoEtapas.data || [],
       }}
     />
   );

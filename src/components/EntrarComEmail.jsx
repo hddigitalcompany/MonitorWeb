@@ -31,7 +31,7 @@ export default function EntrarComEmail() {
       return;
     }
 
-    router.push("/dashboard/inicio");
+    router.push("/carregando");
     router.refresh();
   }
 

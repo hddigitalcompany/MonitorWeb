@@ -21,6 +21,7 @@ import {
   CreditCard,
   LogIn,
   UserCheck,
+  Loader2,
   ChevronDown,
 } from "lucide-react";
 import { extrairIdYoutube } from "@/lib/youtube";
@@ -36,6 +37,7 @@ import PainelAoVivo from "@/components/admin/PainelAoVivo";
 const ROTAS_PREVIEW = [
   { href: "/", label: "Login / criar conta" },
   { href: "/completar-cadastro?preview=1", label: "Completar cadastro" },
+  { href: "/carregando?preview=1", label: "Tela de carregamento" },
   { href: "/dashboard/inicio", label: "Início" },
   ...ABAS.filter((a) => a.href !== "/dashboard/inicio"),
 ];
@@ -52,6 +54,7 @@ const SECOES = [
   { id: "ajuda", label: "Ajuda rápida" },
   { id: "suporte", label: "Suporte" },
   { id: "conversas_demo", label: "Conversas (exemplo)" },
+  { id: "carregamento", label: "Tela de carregamento" },
   { id: "clientes", label: "Clientes" },
   { id: "reembolsos", label: "Reembolsos" },
   { id: "textos", label: "Textos" },
@@ -110,6 +113,7 @@ export default function AdminDashboard({ dadosIniciais }) {
         {secao === "ajuda" && <SecaoAjudaRapida itens={dadosIniciais.ajudaRapida} />}
         {secao === "suporte" && <SecaoSuporte chamadosIniciais={dadosIniciais.chamados} />}
         {secao === "conversas_demo" && <SecaoConversasDemo itens={dadosIniciais.conversasDemo} />}
+        {secao === "carregamento" && <SecaoCarregamento itens={dadosIniciais.carregamentoEtapas} />}
         {secao === "clientes" && (
           <SecaoClientes itens={dadosIniciais.clientes} erroConfig={dadosIniciais.erroClientes} />
         )}
@@ -949,6 +953,16 @@ const GRUPOS_TEXTOS = [
       ["completar_erro_salvar", "Erro ao salvar"],
       ["completar_botao", "Texto do botão"],
       ["completar_botao_salvando", "Texto do botão enquanto salva"],
+    ],
+  },
+  {
+    titulo: "Tela de carregamento",
+    icon: Loader2,
+    campos: [
+      ["carregando_pergunta", "Pergunta de confirmação do telefone"],
+      ["carregando_botao_sim", "Botão: está certo"],
+      ["carregando_botao_nao", "Botão: corrigir"],
+      ["carregando_botao_editar_salvar", "Botão: salvar telefone corrigido"],
     ],
   },
 ];
@@ -2017,6 +2031,159 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
                 )}
               </div>
             )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+function SecaoCarregamento({ itens: itensIniciais }) {
+  const [etapas, setEtapas] = useState(itensIniciais);
+  const [frase, setFrase] = useState("");
+  const [duracao, setDuracao] = useState("1.5");
+  const [ordem, setOrdem] = useState(String((itensIniciais?.length || 0) + 1));
+  const supabase = createClient();
+
+  function ordenar(lista) {
+    return [...lista].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+  }
+
+  async function adicionar() {
+    if (!frase.trim()) return;
+    const { data: novo, error } = await supabase
+      .from("conteudo_carregamento_etapas")
+      .insert({
+        frase: frase.trim(),
+        duracao_segundos: Number(duracao) || 1.5,
+        ordem: Number(ordem) || 0,
+      })
+      .select()
+      .single();
+    if (!error && novo) {
+      setEtapas((atual) => ordenar([...atual, novo]));
+      setFrase("");
+      setDuracao("1.5");
+      setOrdem(String(etapas.length + 2));
+    }
+  }
+
+  async function salvarCampo(etapa, campo, valor) {
+    const { data, error } = await supabase
+      .from("conteudo_carregamento_etapas")
+      .update({ [campo]: valor })
+      .eq("id", etapa.id)
+      .select()
+      .single();
+    if (!error && data) {
+      setEtapas((atual) => ordenar(atual.map((e) => (e.id === etapa.id ? data : e))));
+    }
+  }
+
+  async function excluir(id) {
+    await supabase.from("conteudo_carregamento_etapas").delete().eq("id", id);
+    setEtapas((atual) => atual.filter((e) => e.id !== id));
+  }
+
+  return (
+    <div>
+      <p className="mb-4 text-xs text-muted">
+        Essa é a sequência de telas que aparece toda vez que alguém entra no app (depois do login,
+        ou depois de completar o cadastro), antes de chegar no Início. A ordem de baixo decide a
+        ordem que as frases aparecem, e o tempo é quanto cada uma fica na tela antes de passar pra
+        próxima, em segundos (pode usar vírgula ou ponto, tipo 1.5 ou 2).
+      </p>
+
+      <div className="card mb-6 grid gap-3 sm:grid-cols-[1fr_auto_auto]">
+        <div>
+          <p className="field-label">Frase</p>
+          <input value={frase} onChange={(e) => setFrase(e.target.value)} className="field-input" placeholder="Ex: Carregando seu painel" />
+        </div>
+        <div>
+          <p className="field-label">Tempo (segundos)</p>
+          <input
+            type="number"
+            min="0.3"
+            step="0.1"
+            value={duracao}
+            onChange={(e) => setDuracao(e.target.value)}
+            className="field-input w-28"
+          />
+        </div>
+        <div>
+          <p className="field-label">Ordem</p>
+          <input
+            type="number"
+            min="1"
+            step="1"
+            value={ordem}
+            onChange={(e) => setOrdem(e.target.value)}
+            className="field-input w-20"
+          />
+        </div>
+        <div className="sm:col-span-3">
+          <button onClick={adicionar} className="btn-primary w-full">
+            Publicar etapa
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        {etapas.length === 0 && <p className="text-sm text-muted">Nenhuma etapa cadastrada ainda.</p>}
+        {etapas.map((e) => (
+          <div key={e.id} className="rounded-sm border border-border bg-surface p-3">
+            <div className="mb-2 flex items-start justify-between gap-2">
+              <input
+                key={`${e.id}-frase-${e.frase}`}
+                defaultValue={e.frase}
+                onBlur={(ev) => {
+                  const novo = ev.target.value.trim();
+                  if (novo && novo !== e.frase) salvarCampo(e, "frase", novo);
+                }}
+                onKeyDown={(ev) => ev.key === "Enter" && ev.currentTarget.blur()}
+                className="field-input flex-1 text-sm"
+              />
+              <button onClick={() => excluir(e.id)} className="shrink-0 text-muted hover:text-rust">
+                <Trash2 size={14} />
+              </button>
+            </div>
+            <div className="flex items-center gap-4 text-[11px] text-muted">
+              <label className="flex items-center gap-1.5">
+                Tempo (s):
+                <input
+                  key={`${e.id}-duracao-${e.duracao_segundos}`}
+                  type="number"
+                  min="0.3"
+                  step="0.1"
+                  defaultValue={e.duracao_segundos}
+                  onBlur={(ev) => {
+                    const novo = Number(ev.target.value);
+                    if (Number.isFinite(novo) && novo > 0 && novo !== e.duracao_segundos) {
+                      salvarCampo(e, "duracao_segundos", novo);
+                    }
+                  }}
+                  onKeyDown={(ev) => ev.key === "Enter" && ev.currentTarget.blur()}
+                  className="w-16 rounded-sm border border-border bg-surface px-1.5 py-0.5 text-[11px] text-ink"
+                />
+              </label>
+              <label className="flex items-center gap-1.5">
+                Ordem:
+                <input
+                  key={`${e.id}-ordem-${e.ordem}`}
+                  type="number"
+                  min="1"
+                  step="1"
+                  defaultValue={e.ordem}
+                  onBlur={(ev) => {
+                    const novo = parseInt(ev.target.value, 10);
+                    if (!Number.isNaN(novo) && novo !== e.ordem) salvarCampo(e, "ordem", novo);
+                  }}
+                  onKeyDown={(ev) => ev.key === "Enter" && ev.currentTarget.blur()}
+                  className="w-14 rounded-sm border border-border bg-surface px-1.5 py-0.5 text-[11px] text-ink"
+                />
+              </label>
+            </div>
           </div>
         ))}
       </div>

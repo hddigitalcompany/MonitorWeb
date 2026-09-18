@@ -48,6 +48,10 @@ export const TEXTOS_PADRAO = {
   completar_erro_salvar: "Não deu pra salvar. Tenta de novo.",
   completar_botao: "Continuar",
   completar_botao_salvando: "Salvando...",
+  carregando_pergunta: "Esse é o seu número de telefone?",
+  carregando_botao_sim: "Sim, está certo",
+  carregando_botao_nao: "Não, corrigir",
+  carregando_botao_editar_salvar: "Salvar e continuar",
 };
 
 export async function buscarTextos(supabase) {

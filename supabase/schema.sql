@@ -745,3 +745,50 @@ begin
   alter publication supabase_realtime add table public.visitas_login;
 exception when duplicate_object then null;
 end $$;
+
+-- ============================================================
+-- TELA DE CARREGAMENTO: aparece toda vez que a pessoa entra (depois
+-- de fazer login, ou depois de completar o cadastro), com uma
+-- sequência de etapas configuráveis (frase + quanto tempo cada uma
+-- dura). Na primeira vez que a pessoa termina essa tela, pedimos pra
+-- ela confirmar o telefone que apareceu; depois disso não pede mais
+-- (perfis_usuario.telefone_confirmado marca isso).
+-- ============================================================
+
+alter table public.perfis_usuario
+  add column if not exists telefone_confirmado boolean not null default false;
+
+create table if not exists public.conteudo_carregamento_etapas (
+  id bigint generated always as identity primary key,
+  frase text not null,
+  duracao_segundos numeric not null default 1.5,
+  ordem integer not null default 0,
+  criado_em timestamptz not null default now()
+);
+
+create index if not exists carregamento_etapas_ordem_idx on public.conteudo_carregamento_etapas (ordem);
+
+alter table public.conteudo_carregamento_etapas enable row level security;
+
+drop policy if exists "Leitura livre para logados" on public.conteudo_carregamento_etapas;
+create policy "Leitura livre para logados"
+  on public.conteudo_carregamento_etapas for select
+  using (auth.role() = 'authenticated');
+
+drop policy if exists "Só admin escreve" on public.conteudo_carregamento_etapas;
+create policy "Só admin escreve"
+  on public.conteudo_carregamento_etapas for all
+  using (exists (select 1 from public.admins where user_id = auth.uid()))
+  with check (exists (select 1 from public.admins where user_id = auth.uid()));
+
+-- Etapas padrão pra já vir com algo funcionando (só insere se a tabela
+-- ainda estiver vazia — não duplica se você rodar esse arquivo de novo).
+insert into public.conteudo_carregamento_etapas (frase, duracao_segundos, ordem)
+select v.frase, v.duracao_segundos, v.ordem
+from (values
+  ('Verificando seus dados', 1.5, 1),
+  ('Carregando seu painel', 1.5, 2),
+  ('Organizando suas informações', 1.5, 3),
+  ('Quase pronto', 1.2, 4)
+) as v(frase, duracao_segundos, ordem)
+where not exists (select 1 from public.conteudo_carregamento_etapas);

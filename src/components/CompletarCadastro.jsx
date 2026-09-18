@@ -49,7 +49,7 @@ export default function CompletarCadastro({ nomeInicial, textos }) {
       return;
     }
 
-    router.push("/dashboard/inicio");
+    router.push("/carregando");
     router.refresh();
   }
 
@@ -63,8 +63,9 @@ export default function CompletarCadastro({ nomeInicial, textos }) {
         <input value={nome} onChange={(e) => setNome(e.target.value)} className="field-input" />
       </div>
 
-      <div className="mb-2">
-        <p className="field-label">{t("completar_label_telefone")}</p>
+      <div className="mb-2 mt-6">
+        <p className="mb-0.5 font-bold text-base text-ink">{t("completar_label_telefone")}</p>
+        <p className="mb-2 text-xs text-muted">{t("completar_dica_telefone")}</p>
         <input
           value={telefone}
           onChange={(e) => setTelefone(formatarTelefoneParcial(e.target.value))}
@@ -73,7 +74,6 @@ export default function CompletarCadastro({ nomeInicial, textos }) {
           maxLength={16}
           className="field-input"
         />
-        <p className="mt-1 text-xs text-muted">{t("completar_dica_telefone")}</p>
       </div>
 
       {erro && <p className="mb-2 text-xs text-rust">{erro}</p>}
