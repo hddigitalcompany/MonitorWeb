@@ -111,6 +111,7 @@ export default function Carregando({
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6 py-10">
+      <p className="mb-1 text-center text-lg font-extrabold text-ink">{t("carregando_titulo_topo")}</p>
       <p className="mb-8 text-center text-sm text-muted">{formatarTelefone(telefoneAtual)}</p>
 
       {fase === "animando" && (
