@@ -28,9 +28,9 @@ export const ABAS = [
   { href: "/dashboard/fotos", label: "Fotos", icon: ImageIcon },
   { href: "/dashboard/locais-seguros", label: "Local", icon: MapPin },
   { href: "/dashboard/lembretes", label: "Lembretes", icon: Phone },
-  { href: "/dashboard/links-ajuda", label: "Links", icon: Search },
-  { href: "/dashboard/wifi", label: "Wifi", icon: Wifi },
   { href: "/dashboard/conversas", label: "Conversas", icon: MessageCircle },
+  { href: "/dashboard/wifi", label: "Wifi", icon: Wifi },
+  { href: "/dashboard/links-ajuda", label: "Links", icon: Search },
   { href: "/dashboard/contatos", label: "Contatos", icon: BookUser },
 ];
 
