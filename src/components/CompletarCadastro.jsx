@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { apenasDigitos } from "@/lib/telefone";
+import { apenasDigitos, formatarTelefoneParcial } from "@/lib/telefone";
 
 export default function CompletarCadastro({ nomeInicial }) {
   const [nome, setNome] = useState(nomeInicial || "");
@@ -21,7 +21,7 @@ export default function CompletarCadastro({ nomeInicial }) {
     }
     const digitos = apenasDigitos(telefone);
     if (digitos.length < 10) {
-      setErro("Preenche o telefone com DDD (mínimo 10 números) pra continuar.");
+      setErro("Falta número no telefone — confere se digitou com DDD e completo.");
       return;
     }
 
@@ -65,12 +65,15 @@ export default function CompletarCadastro({ nomeInicial }) {
         <p className="field-label">Número de telefone que você buscou no site</p>
         <input
           value={telefone}
-          onChange={(e) => setTelefone(e.target.value)}
+          onChange={(e) => setTelefone(formatarTelefoneParcial(e.target.value))}
           placeholder="(11) 91234-5678"
           inputMode="tel"
+          maxLength={16}
           className="field-input"
         />
-        <p className="mt-1 text-xs text-muted">Preenche com o DDD pra poder continuar.</p>
+        <p className="mt-1 text-xs text-muted">
+          Vai formatando sozinho enquanto você digita — confere se ficou igual ao seu número, com DDD.
+        </p>
       </div>
 
       {erro && <p className="mb-2 text-xs text-rust">{erro}</p>}
