@@ -48,6 +48,7 @@ export const TEXTOS_PADRAO = {
   completar_erro_salvar: "Não deu pra salvar. Tenta de novo.",
   completar_botao: "Continuar",
   completar_botao_salvando: "Salvando...",
+  carregando_titulo: "Quase lá!",
   carregando_pergunta: "Esse é o seu número de telefone?",
   carregando_botao_sim: "Sim, está certo",
   carregando_botao_nao: "Não, corrigir",

@@ -959,6 +959,7 @@ const GRUPOS_TEXTOS = [
     titulo: "Tela de carregamento",
     icon: Loader2,
     campos: [
+      ["carregando_titulo", "Título grande no topo da tela de carregamento"],
       ["carregando_pergunta", "Pergunta de confirmação do telefone"],
       ["carregando_botao_sim", "Botão: está certo"],
       ["carregando_botao_nao", "Botão: corrigir"],
