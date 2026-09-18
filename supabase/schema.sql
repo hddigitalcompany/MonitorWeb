@@ -792,3 +792,8 @@ from (values
   ('Quase pronto', 1.2, 4)
 ) as v(frase, duracao_segundos, ordem)
 where not exists (select 1 from public.conteudo_carregamento_etapas);
+
+-- Frase opcional que aparece quando uma etapa da tela de carregamento termina
+-- (ex: "Buscando conexão ..." -> "Conectado.")
+alter table public.conteudo_carregamento_etapas
+  add column if not exists frase_concluida text not null default '';
