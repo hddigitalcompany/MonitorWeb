@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { apenasDigitos, formatarTelefone, formatarTelefoneParcial } from "@/lib/telefone";
 import { texto } from "@/lib/textos";
-import { BadgeCheck, Check, Loader2 } from "lucide-react";
+import { Badge, Check, Loader2 } from "lucide-react";
 
 // Roda toda vez que a pessoa entra (depois do login, ou depois de
 // completar o cadastro): mostra as etapas configuradas no admin uma
@@ -180,8 +180,9 @@ export default function Carregando({
       {fase === "confirmando" && (
         <div className="w-full rounded-[1.75rem] bg-surface p-6 text-center shadow-xl">
           <div className="relative mx-auto mb-5 flex h-16 w-16 items-center justify-center">
-            <div className="absolute inset-0 rounded-full bg-olive/30 blur-xl" />
-            <BadgeCheck size={64} strokeWidth={1.5} className="relative text-olive" />
+            <div className="absolute inset-0 rounded-full bg-sky-400/30 blur-xl" />
+            <Badge size={64} className="absolute inset-0 fill-sky-500 text-sky-500" />
+            <Check size={28} strokeWidth={3} className="relative text-white" />
           </div>
 
           <p className="text-xl font-extrabold text-ink">{t("carregando_pergunta")}</p>
