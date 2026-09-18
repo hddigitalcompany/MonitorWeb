@@ -64,6 +64,48 @@ function diaDaSemana({ ano, mes, dia }) {
   return new Date(Date.UTC(ano, mes - 1, dia)).getUTCDay(); // 0 = domingo
 }
 
+// Gráfico de "horário de pico": uma curva suave (tipo gráfico de ações),
+// não barrinhas, pra dar pra ver o formato do dia de cara, sem precisar
+// tocar em nada.
+const GRAFICO_PICO_LARGURA = 240;
+const GRAFICO_PICO_ALTURA = 90;
+const GRAFICO_PICO_PAD_TOPO = 14;
+const GRAFICO_PICO_PAD_BASE = 4;
+
+function pontosGraficoPico(valores) {
+  const max = Math.max(1, ...valores);
+  const n = valores.length;
+  const util = GRAFICO_PICO_ALTURA - GRAFICO_PICO_PAD_TOPO - GRAFICO_PICO_PAD_BASE;
+  return valores.map((v, i) => ({
+    x: n > 1 ? (i / (n - 1)) * GRAFICO_PICO_LARGURA : GRAFICO_PICO_LARGURA / 2,
+    y: GRAFICO_PICO_PAD_TOPO + (1 - v / max) * util,
+  }));
+}
+
+// Curva suave passando pelos pontos: em cada ponto do meio, desenha até o
+// meio-do-caminho pro próximo, usando o ponto atual como "puxador" da
+// curva — assim não fica com cantos duros feito um gráfico de linha reto.
+function pathLinhaSuave(pontos) {
+  if (pontos.length === 0) return "";
+  if (pontos.length === 1) return `M ${pontos[0].x} ${pontos[0].y}`;
+  let d = `M ${pontos[0].x} ${pontos[0].y}`;
+  for (let i = 1; i < pontos.length - 1; i++) {
+    const xMeio = (pontos[i].x + pontos[i + 1].x) / 2;
+    const yMeio = (pontos[i].y + pontos[i + 1].y) / 2;
+    d += ` Q ${pontos[i].x} ${pontos[i].y} ${xMeio} ${yMeio}`;
+  }
+  const ultimo = pontos[pontos.length - 1];
+  d += ` Q ${ultimo.x} ${ultimo.y} ${ultimo.x} ${ultimo.y}`;
+  return d;
+}
+
+function pathAreaSuave(pontos) {
+  if (pontos.length === 0) return "";
+  const primeiro = pontos[0];
+  const ultimo = pontos[pontos.length - 1];
+  return `${pathLinhaSuave(pontos)} L ${ultimo.x} ${GRAFICO_PICO_ALTURA} L ${primeiro.x} ${GRAFICO_PICO_ALTURA} Z`;
+}
+
 export default function PainelAoVivo({
   eventosIniciais = [],
   visitasLoginIniciais = [],
@@ -79,7 +121,6 @@ export default function PainelAoVivo({
   );
   const [contasLive, setContasLive] = useState([]);
   const [agora, setAgora] = useState(() => new Date());
-  const [horaSelecionada, setHoraSelecionada] = useState(null);
 
   // Relógio próprio: mesmo sem nenhuma visita nova chegando, os números por
   // tempo (tipo "agora" e a virada do dia) precisam continuar corretos.
@@ -326,33 +367,54 @@ export default function PainelAoVivo({
       <div className="mb-6 rounded-sm border border-border bg-surface p-3">
         {dados.temEventos30 ? (
           <>
+            <p className="mb-2 text-sm text-ink">
+              Pico às <span className="font-extrabold">{String(dados.horaPico).padStart(2, "0")}h</span>
+              {" — "}
+              <span className="font-extrabold">{dados.contagemHora[dados.horaPico] || 0}</span>{" "}
+              {dados.contagemHora[dados.horaPico] === 1 ? "acesso" : "acessos"}
+            </p>
             {(() => {
-              const horaEmFoco = horaSelecionada ?? dados.horaPico;
-              const qtdEmFoco = dados.contagemHora[horaEmFoco] || 0;
+              const pontos = pontosGraficoPico(dados.contagemHora);
+              const pontoPico = pontos[dados.horaPico];
               return (
-                <p className="mb-2 text-sm text-ink">
-                  {horaSelecionada === null ? "Pico às " : "às "}
-                  <span className="font-extrabold">{String(horaEmFoco).padStart(2, "0")}h</span>
-                  {" — "}
-                  <span className="font-extrabold">{qtdEmFoco}</span>{" "}
-                  {qtdEmFoco === 1 ? "acesso" : "acessos"}
-                </p>
+                <svg
+                  viewBox={`0 0 ${GRAFICO_PICO_LARGURA} ${GRAFICO_PICO_ALTURA}`}
+                  preserveAspectRatio="none"
+                  className="h-20 w-full"
+                >
+                  <defs>
+                    <linearGradient id="graficoPicoGlow" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#C6F136" stopOpacity="0.5" />
+                      <stop offset="100%" stopColor="#C6F136" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  {[0, 6, 12, 18, 23].map((h) => (
+                    <line
+                      key={h}
+                      x1={pontos[h]?.x}
+                      x2={pontos[h]?.x}
+                      y1={0}
+                      y2={GRAFICO_PICO_ALTURA}
+                      stroke="#E2E1D3"
+                      strokeWidth="1"
+                      strokeDasharray="3 3"
+                    />
+                  ))}
+                  <path d={pathAreaSuave(pontos)} fill="url(#graficoPicoGlow)" stroke="none" />
+                  <path
+                    d={pathLinhaSuave(pontos)}
+                    fill="none"
+                    stroke="#4F6B3F"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  {pontoPico && (
+                    <circle cx={pontoPico.x} cy={pontoPico.y} r="4.5" fill="#C6F136" stroke="#FFFFFF" strokeWidth="2.5" />
+                  )}
+                </svg>
               );
             })()}
-            <div className="flex h-16 items-end gap-[2px]">
-              {dados.contagemHora.map((q, h) => (
-                <button
-                  key={h}
-                  type="button"
-                  title={`${h}h: ${q}`}
-                  onClick={() => setHoraSelecionada((atual) => (atual === h ? null : h))}
-                  className={`flex-1 rounded-t-sm transition-colors ${
-                    h === (horaSelecionada ?? dados.horaPico) ? "bg-amber" : "bg-surface2 hover:bg-amber/40"
-                  }`}
-                  style={{ height: `${Math.max(4, (q / dados.maxHora) * 100)}%` }}
-                />
-              ))}
-            </div>
             <div className="mt-1 flex justify-between text-[9px] text-muted">
               <span>0h</span>
               <span>6h</span>
