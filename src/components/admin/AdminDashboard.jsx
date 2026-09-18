@@ -20,6 +20,7 @@ import {
   Users,
   CreditCard,
   LogIn,
+  UserCheck,
   ChevronDown,
 } from "lucide-react";
 import { extrairIdYoutube } from "@/lib/youtube";
@@ -34,6 +35,7 @@ import PainelAoVivo from "@/components/admin/PainelAoVivo";
 
 const ROTAS_PREVIEW = [
   { href: "/", label: "Login / criar conta" },
+  { href: "/completar-cadastro?preview=1", label: "Completar cadastro" },
   { href: "/dashboard/inicio", label: "Início" },
   ...ABAS.filter((a) => a.href !== "/dashboard/inicio"),
 ];
@@ -931,6 +933,22 @@ const GRUPOS_TEXTOS = [
       ["login_subtitulo", "Subtítulo"],
       ["login_erro", "Mensagem de erro"],
       ["login_rodape", "Rodapé"],
+    ],
+  },
+  {
+    titulo: "Completar cadastro",
+    icon: UserCheck,
+    campos: [
+      ["completar_titulo", "Título"],
+      ["completar_subtitulo", "Subtítulo"],
+      ["completar_label_nome", "Rótulo do campo nome"],
+      ["completar_label_telefone", "Rótulo do campo telefone"],
+      ["completar_dica_telefone", "Dica abaixo do telefone"],
+      ["completar_erro_nome", "Erro: nome vazio"],
+      ["completar_erro_telefone", "Erro: telefone incompleto"],
+      ["completar_erro_salvar", "Erro ao salvar"],
+      ["completar_botao", "Texto do botão"],
+      ["completar_botao_salvando", "Texto do botão enquanto salva"],
     ],
   },
 ];

@@ -4,8 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { apenasDigitos, formatarTelefoneParcial } from "@/lib/telefone";
+import { texto } from "@/lib/textos";
 
-export default function CompletarCadastro({ nomeInicial }) {
+export default function CompletarCadastro({ nomeInicial, textos }) {
+  const t = (chave) => texto(textos, chave);
   const [nome, setNome] = useState(nomeInicial || "");
   const [telefone, setTelefone] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -16,12 +18,12 @@ export default function CompletarCadastro({ nomeInicial }) {
   async function enviar() {
     setErro("");
     if (!nome.trim()) {
-      setErro("Preenche seu nome pra continuar.");
+      setErro(t("completar_erro_nome"));
       return;
     }
     const digitos = apenasDigitos(telefone);
     if (digitos.length < 10) {
-      setErro("Falta número no telefone — confere se digitou com DDD e completo.");
+      setErro(t("completar_erro_telefone"));
       return;
     }
 
@@ -43,7 +45,7 @@ export default function CompletarCadastro({ nomeInicial }) {
     setEnviando(false);
 
     if (error) {
-      setErro("Não deu pra salvar. Tenta de novo.");
+      setErro(t("completar_erro_salvar"));
       return;
     }
 
@@ -53,16 +55,16 @@ export default function CompletarCadastro({ nomeInicial }) {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6 py-10">
-      <p className="mb-1 font-extrabold tracking-tight text-2xl text-ink">Só mais um passo</p>
-      <p className="mb-6 text-sm text-muted">Confirme seus dados pra liberar o acesso ao app.</p>
+      <p className="mb-1 font-extrabold tracking-tight text-2xl text-ink">{t("completar_titulo")}</p>
+      <p className="mb-6 text-sm text-muted">{t("completar_subtitulo")}</p>
 
       <div className="mb-4">
-        <p className="field-label">Nome</p>
+        <p className="field-label">{t("completar_label_nome")}</p>
         <input value={nome} onChange={(e) => setNome(e.target.value)} className="field-input" />
       </div>
 
       <div className="mb-2">
-        <p className="field-label">Número de telefone que você buscou no site</p>
+        <p className="field-label">{t("completar_label_telefone")}</p>
         <input
           value={telefone}
           onChange={(e) => setTelefone(formatarTelefoneParcial(e.target.value))}
@@ -71,15 +73,13 @@ export default function CompletarCadastro({ nomeInicial }) {
           maxLength={16}
           className="field-input"
         />
-        <p className="mt-1 text-xs text-muted">
-          Vai formatando sozinho enquanto você digita — confere se ficou igual ao seu número, com DDD.
-        </p>
+        <p className="mt-1 text-xs text-muted">{t("completar_dica_telefone")}</p>
       </div>
 
       {erro && <p className="mb-2 text-xs text-rust">{erro}</p>}
 
       <button onClick={enviar} disabled={enviando} className="btn-primary mt-2 w-full disabled:opacity-50">
-        {enviando ? "Salvando..." : "Continuar"}
+        {enviando ? t("completar_botao_salvando") : t("completar_botao")}
       </button>
     </main>
   );

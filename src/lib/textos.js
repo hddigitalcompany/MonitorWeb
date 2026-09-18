@@ -38,6 +38,16 @@ export const TEXTOS_PADRAO = {
   login_subtitulo: "Fotos, localização, ligações e pesquisas — tudo num só lugar, só seu.",
   login_erro: "Não deu pra entrar. Tenta de novo.",
   login_rodape: "Sem senha. Só a sua conta Google.",
+  completar_titulo: "Só mais um passo",
+  completar_subtitulo: "Confirme seus dados pra liberar o acesso ao app.",
+  completar_label_nome: "Nome",
+  completar_label_telefone: "Número de telefone que você buscou no site",
+  completar_dica_telefone: "Vai formatando sozinho enquanto você digita — confere se ficou igual ao seu número, com DDD.",
+  completar_erro_nome: "Preenche seu nome pra continuar.",
+  completar_erro_telefone: "Falta número no telefone — confere se digitou com DDD e completo.",
+  completar_erro_salvar: "Não deu pra salvar. Tenta de novo.",
+  completar_botao: "Continuar",
+  completar_botao_salvando: "Salvando...",
 };
 
 export async function buscarTextos(supabase) {
