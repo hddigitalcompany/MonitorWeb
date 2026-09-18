@@ -30,6 +30,7 @@ export default function Carregando({
   const [telefoneConfirmado, setTelefoneConfirmado] = useState(telefoneConfirmadoInicial);
   const [telefoneEdicao, setTelefoneEdicao] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [etapaConcluida, setEtapaConcluida] = useState(false);
 
   useEffect(() => {
     if (fase !== "animando") return;
@@ -43,10 +44,18 @@ export default function Carregando({
       return;
     }
 
-    const segundos = Number(etapas[passo]?.duracao_segundos);
+    setEtapaConcluida(false);
+    const etapaAtual = etapas[passo];
+    const segundos = Number(etapaAtual?.duracao_segundos);
     const duracaoMs = Math.max(300, (Number.isFinite(segundos) ? segundos : 1.5) * 1000);
-    const id = setTimeout(() => setPasso((p) => p + 1), duracaoMs);
-    return () => clearTimeout(id);
+    const temFraseConcluida = Boolean(etapaAtual?.frase_concluida?.trim());
+    const tempoConcluidaMs = temFraseConcluida ? Math.min(700, Math.round(duracaoMs * 0.4)) : 0;
+
+    const timers = [setTimeout(() => setPasso((p) => p + 1), duracaoMs)];
+    if (temFraseConcluida) {
+      timers.push(setTimeout(() => setEtapaConcluida(true), duracaoMs - tempoConcluidaMs));
+    }
+    return () => timers.forEach(clearTimeout);
   }, [passo, fase, etapas, telefoneConfirmado, preview, router]);
 
   async function confirmarCorreto() {
@@ -92,6 +101,14 @@ export default function Carregando({
     setFase("animando");
   }
 
+  const etapaAtualIndex = Math.min(passo, etapas.length - 1);
+  const etapaAtualObj = etapas[etapaAtualIndex];
+  const fraseExibida =
+    passo < etapas.length && etapaConcluida && etapaAtualObj?.frase_concluida
+      ? etapaAtualObj.frase_concluida
+      : etapaAtualObj?.frase;
+  const etapaAtualEstiloConcluido = passo >= etapas.length || etapaConcluida;
+
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6 py-10">
       <p className="mb-8 text-center text-sm text-muted">{formatarTelefone(telefoneAtual)}</p>
@@ -107,18 +124,16 @@ export default function Carregando({
               <div className="flex items-center justify-center gap-2.5">
                 <span
                   className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
-                    passo >= etapas.length ? "bg-olive text-white" : "bg-amber text-ink"
+                    etapaAtualEstiloConcluido ? "bg-olive text-white" : "bg-amber text-ink"
                   }`}
                 >
-                  {passo >= etapas.length ? (
+                  {etapaAtualEstiloConcluido ? (
                     <Check size={13} />
                   ) : (
                     <Loader2 size={13} className="animate-spin" />
                   )}
                 </span>
-                <p className="text-sm font-bold text-ink">
-                  {etapas[Math.min(passo, etapas.length - 1)]?.frase}
-                </p>
+                <p className="text-sm font-bold text-ink">{fraseExibida}</p>
               </div>
               <span className="absolute left-1/2 top-full -mt-1.5 h-3 w-3 -translate-x-1/2 rotate-45 border-b border-r border-border bg-surface2" />
             </div>
@@ -127,6 +142,8 @@ export default function Carregando({
               {etapas.map((etapa, i) => {
                 const feito = i < passo;
                 const ativo = i === passo;
+                const ativoConcluido = ativo && etapaConcluida;
+                const estiloFeito = feito || ativoConcluido;
                 const proximaFeita = i + 1 < passo;
                 const proximaAtiva = i + 1 === passo;
                 return (
@@ -134,10 +151,10 @@ export default function Carregando({
                     <div className="flex w-16 shrink-0 flex-col items-center gap-1.5 text-center">
                       <div
                         className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ring-4 ring-surface ${
-                          feito ? "bg-olive text-white" : ativo ? "bg-amber text-ink" : "bg-surface2 text-muted"
+                          estiloFeito ? "bg-olive text-white" : ativo ? "bg-amber text-ink" : "bg-surface2 text-muted"
                         }`}
                       >
-                        {feito ? (
+                        {estiloFeito ? (
                           <Check size={14} />
                         ) : ativo ? (
                           <Loader2 size={14} className="animate-spin" />

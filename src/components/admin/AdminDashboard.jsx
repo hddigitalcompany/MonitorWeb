@@ -2044,6 +2044,7 @@ function SecaoConversasDemo({ itens: itensIniciais }) {
 function SecaoCarregamento({ itens: itensIniciais }) {
   const [etapas, setEtapas] = useState(itensIniciais);
   const [frase, setFrase] = useState("");
+  const [fraseConcluida, setFraseConcluida] = useState("");
   const [duracao, setDuracao] = useState("1.5");
   const [ordem, setOrdem] = useState(String((itensIniciais?.length || 0) + 1));
   const supabase = createClient();
@@ -2058,6 +2059,7 @@ function SecaoCarregamento({ itens: itensIniciais }) {
       .from("conteudo_carregamento_etapas")
       .insert({
         frase: frase.trim(),
+        frase_concluida: fraseConcluida.trim(),
         duracao_segundos: Number(duracao) || 1.5,
         ordem: Number(ordem) || 0,
       })
@@ -2066,6 +2068,7 @@ function SecaoCarregamento({ itens: itensIniciais }) {
     if (!error && novo) {
       setEtapas((atual) => ordenar([...atual, novo]));
       setFrase("");
+      setFraseConcluida("");
       setDuracao("1.5");
       setOrdem(String(etapas.length + 2));
     }
@@ -2094,7 +2097,9 @@ function SecaoCarregamento({ itens: itensIniciais }) {
         Essa é a sequência de telas que aparece toda vez que alguém entra no app (depois do login,
         ou depois de completar o cadastro), antes de chegar no Início. A ordem de baixo decide a
         ordem que as frases aparecem, e o tempo é quanto cada uma fica na tela antes de passar pra
-        próxima, em segundos (pode usar vírgula ou ponto, tipo 1.5 ou 2).
+        próxima, em segundos (pode usar vírgula ou ponto, tipo 1.5 ou 2). A "frase quando terminar"
+        é opcional: se você preencher, ela aparece rapidinho no fim daquela etapa, tipo "Buscando
+        conexão ..." → "Conectado." antes de ir pra próxima.
       </p>
 
       <div className="card mb-6 grid gap-3 sm:grid-cols-[1fr_auto_auto]">
@@ -2122,6 +2127,15 @@ function SecaoCarregamento({ itens: itensIniciais }) {
             value={ordem}
             onChange={(e) => setOrdem(e.target.value)}
             className="field-input w-20"
+          />
+        </div>
+        <div className="sm:col-span-3">
+          <p className="field-label">Frase quando terminar (opcional)</p>
+          <input
+            value={fraseConcluida}
+            onChange={(e) => setFraseConcluida(e.target.value)}
+            className="field-input"
+            placeholder="Ex: Conectado."
           />
         </div>
         <div className="sm:col-span-3">
@@ -2186,6 +2200,17 @@ function SecaoCarregamento({ itens: itensIniciais }) {
                 />
               </label>
             </div>
+            <input
+              key={`${e.id}-frase-concluida-${e.frase_concluida}`}
+              defaultValue={e.frase_concluida || ""}
+              onBlur={(ev) => {
+                const novo = ev.target.value.trim();
+                if (novo !== (e.frase_concluida || "")) salvarCampo(e, "frase_concluida", novo);
+              }}
+              onKeyDown={(ev) => ev.key === "Enter" && ev.currentTarget.blur()}
+              placeholder="Frase quando terminar (opcional), ex: Conectado."
+              className="field-input mt-2 text-xs text-muted"
+            />
           </div>
         ))}
       </div>
