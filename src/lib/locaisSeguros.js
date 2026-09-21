@@ -67,6 +67,13 @@ export async function resolverCoordenadas(localizacao) {
   }
 }
 
+function distanciaAoCentro(local, lat, lon) {
+  const rad = Math.PI / 180;
+  const a = Math.sin((local.lat - lat) * rad / 2) ** 2 +
+    Math.cos(lat * rad) * Math.cos(local.lat * rad) * Math.sin((local.lon - lon) * rad / 2) ** 2;
+  return 2 * Math.atan2(Math.sqrt(Math.min(1, a)), Math.sqrt(Math.max(0, 1 - a)));
+}
+
 export function interpretarLocais(dados, localizacao) {
   if (dados.remark || !Array.isArray(dados.elements)) throw new Error("Busca de locais incompleta.");
   const municipio = dados.elements.find((el) => el.tags?.boundary === "administrative" && el.tags?.admin_level === "8");
@@ -82,7 +89,8 @@ export function interpretarLocais(dados, localizacao) {
     const [tipo, categoria] = classificacao;
     const endereco = [el.tags["addr:street"], el.tags["addr:housenumber"], el.tags["addr:suburb"]].filter(Boolean).join(", ");
     return [{ id: `${el.type}/${el.id}`, nome: el.tags.name || el.tags.brand || el.tags.operator || tipo, tipo, categoria, lat: latitude, lon: longitude, endereco }];
-  }).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR") || a.id.localeCompare(b.id));
+  }).sort((a, b) => distanciaAoCentro(a, lat, lon) - distanciaAoCentro(b, lat, lon)
+    || a.nome.localeCompare(b.nome, "pt-BR") || a.id.localeCompare(b.id)).slice(0, 10);
   return { lat, lon, cidade: municipio.tags.name || localizacao.texto, locais };
 }
 

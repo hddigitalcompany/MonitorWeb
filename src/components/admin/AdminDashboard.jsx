@@ -46,7 +46,6 @@ const SECOES = [
   { id: "painel", label: "Painel ao vivo" },
   { id: "video_conversas", label: "Vídeo (Conversas)" },
   { id: "fotos", label: "Fotos" },
-  { id: "locais", label: "Locais seguros" },
   { id: "lembretes", label: "Lembretes" },
   { id: "links", label: "Links de ajuda" },
   { id: "wifi", label: "Wifi" },
@@ -103,9 +102,6 @@ export default function AdminDashboard({ dadosIniciais }) {
           />
         )}
         {secao === "fotos" && <SecaoFotos itens={dadosIniciais.fotos} />}
-        {secao === "locais" && (
-          <SecaoTexto tabela="conteudo_locais" itens={dadosIniciais.locais} placeholder="Sugestão de local seguro" />
-        )}
         {secao === "lembretes" && <SecaoLembretes itens={dadosIniciais.lembretes} />}
         {secao === "links" && <SecaoLinks itens={dadosIniciais.links} />}
         {secao === "wifi" && <SecaoWifi itens={dadosIniciais.wifiDicas} />}

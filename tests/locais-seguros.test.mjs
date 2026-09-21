@@ -92,11 +92,21 @@ test('inclui categorias do cotidiano em amenity e shop e exclui polícia', () =>
   const q = consultaMunicipio({ lat: -23.5, lon: -46.6 });
   const elements = [municipio, ...tipos.map(([chave, valor], i) => ({ type: 'node', id: i + 10, lat: -23.5, lon: -46.6, tags: { [chave]: valor } }))];
   const resultado = interpretarLocais({ elements }, {});
-  assert.equal(resultado.locais.length, tipos.length);
+  assert.equal(resultado.locais.length, 10);
   for (const [, tag, tipo] of tipos) {
     assert.ok(q.includes(tag));
-    assert.ok(resultado.locais.some(l => l.tipo === tipo && l.categoria));
+    const elemento = elements.find(el => el.tags?.amenity === tag || el.tags?.shop === tag);
+    const individual = interpretarLocais({ elements: [municipio, elemento] }, {});
+    assert.ok(individual.locais.some(l => l.tipo === tipo && l.categoria));
   }
   assert.ok(q.includes('["shop"'));
   assert.doesNotMatch(q, /police|fire_station|hospital/);
+});
+
+test('limita a dez locais próximos mesmo quando existem muitos na cidade', () => {
+  const locais = Array.from({ length: 35 }, (_, i) => ({ type: 'node', id: i + 10,
+    lat: -23.5 + i * .001, lon: -46.6, tags: { amenity: 'restaurant', name: `Local ${i}` } }));
+  const r = interpretarLocais({ elements: [municipio, ...locais.reverse()] }, {});
+  assert.equal(r.locais.length, 10);
+  assert.deepEqual(r.locais.map(l => l.id), Array.from({ length: 10 }, (_, i) => `node/${i + 10}`));
 });

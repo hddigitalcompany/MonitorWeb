@@ -2,8 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/PageHeader";
 import LocaisDaCidade from "@/components/LocaisDaCidade";
 import { buscarTextos, texto } from "@/lib/textos";
-import { garantirPerfilUsuario, registrarVisitaCategoria } from "@/lib/perfil";
-import { quantidadeLiberada } from "@/lib/liberacao";
+import { registrarVisitaCategoria } from "@/lib/perfil";
 
 export default async function LocaisSegurosPage() {
   const supabase = createClient();
@@ -11,18 +10,7 @@ export default async function LocaisSegurosPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const perfil = await garantirPerfilUsuario(supabase, user.id);
   await registrarVisitaCategoria(supabase, user.id, "locais");
-
-  const { data } = await supabase
-    .from("conteudo_locais")
-    .select("*")
-    .order("criado_em", { ascending: true })
-    .order("id", { ascending: true });
-
-  const todos = data || [];
-  const liberados = quantidadeLiberada("locais", perfil.primeiro_login, new Date(), todos.length);
-  const itens = todos.slice(0, liberados).reverse();
 
   return (
     <div>
@@ -30,18 +18,6 @@ export default async function LocaisSegurosPage() {
 
       <LocaisDaCidade />
 
-      <p className="mb-2 text-xs text-muted">Sugestões da nossa equipe</p>
-      {itens.length === 0 ? (
-        <p className="text-sm text-muted">{texto(textos, "locais_vazio")}</p>
-      ) : (
-        <div className="flex flex-col gap-2">
-          {itens.map((item) => (
-            <div key={item.id} className="rounded-sm border border-border bg-surface p-3">
-              <p className="text-sm leading-relaxed text-ink">{item.texto}</p>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

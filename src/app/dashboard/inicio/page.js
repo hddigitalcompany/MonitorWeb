@@ -10,7 +10,6 @@ import { quantidadeLiberada } from "@/lib/liberacao";
 
 const CATEGORIAS_CONTEUDO = [
   { tabela: "conteudo_fotos", categoria: "fotos", href: "/dashboard/fotos" },
-  { tabela: "conteudo_locais", categoria: "locais", href: "/dashboard/locais-seguros" },
   { tabela: "conteudo_lembretes", categoria: "lembretes", href: "/dashboard/lembretes" },
   { tabela: "conteudo_links", categoria: "links", href: "/dashboard/links-ajuda" },
   { tabela: "conteudo_wifi_dicas", categoria: "wifi", href: "/dashboard/wifi" },
