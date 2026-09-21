@@ -37,7 +37,7 @@ export const TEXTOS_PADRAO = {
   login_titulo: "Painel Pessoal",
   login_subtitulo: "Fotos, localização, ligações e pesquisas — tudo num só lugar, só seu.",
   login_erro: "Não deu pra entrar. Tenta de novo.",
-  login_rodape: "Sem senha. Só a sua conta Google.",
+  login_rodape: "Sem senha. Só o seu email pra entrar.",
   completar_titulo: "Só mais um passo",
   completar_subtitulo: "Confirme seus dados pra liberar o acesso ao app.",
   completar_label_nome: "Nome",

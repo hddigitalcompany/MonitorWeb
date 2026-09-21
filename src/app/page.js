@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { buscarTextos, texto } from "@/lib/textos";
-import LoginButton from "@/components/LoginButton";
 import EntrarComEmail from "@/components/EntrarComEmail";
 import RegistrarVisitaLogin from "@/components/RegistrarVisitaLogin";
 
@@ -27,7 +26,6 @@ export default async function LoginPage({ searchParams }) {
               {texto(textos, "login_erro")}
             </p>
           )}
-          <LoginButton />
           <EntrarComEmail />
           <p className="mt-4 text-center text-xs text-muted">{texto(textos, "login_rodape")}</p>
         </div>

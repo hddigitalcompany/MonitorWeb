@@ -36,12 +36,7 @@ export default function EntrarComEmail() {
   }
 
   return (
-    <form onSubmit={enviar} className="mt-4 flex flex-col gap-2">
-      <div className="flex items-center gap-2 text-[11px] text-muted">
-        <span className="h-px flex-1 bg-border" />
-        ou
-        <span className="h-px flex-1 bg-border" />
-      </div>
+    <form onSubmit={enviar} className="flex flex-col gap-2">
       <input
         type="email"
         value={email}
@@ -63,7 +58,7 @@ export default function EntrarComEmail() {
       <button
         type="submit"
         disabled={carregando || !email.trim()}
-        className="w-full rounded-sm border border-border px-3 py-2 text-sm text-ink disabled:opacity-50"
+        className="btn-primary w-full disabled:opacity-50"
       >
         {carregando ? "Entrando..." : "Entrar com email"}
       </button>
