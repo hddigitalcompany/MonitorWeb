@@ -797,3 +797,10 @@ where not exists (select 1 from public.conteudo_carregamento_etapas);
 -- (ex: "Buscando conexão ..." -> "Conectado.")
 alter table public.conteudo_carregamento_etapas
   add column if not exists frase_concluida text not null default '';
+
+-- Prova de acesso por cliente: aparelho e localização aproximada (por IP)
+-- de cada visita, pra dar pra contestar quando alguém disser que não
+-- recebeu/acessou o entregável.
+alter table public.eventos_visita
+  add column if not exists dispositivo text,
+  add column if not exists localizacao text;

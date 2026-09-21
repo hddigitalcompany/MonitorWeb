@@ -1091,6 +1091,64 @@ const ORDENACOES_CLIENTES = [
   { id: "acesso_antigo", label: "Último acesso: mais antigo / nunca" },
 ];
 
+// Rótulos pra rota pra ficar legível ("Início" em vez de
+// "/dashboard/inicio") no histórico de acessos de cada cliente. Usa os
+// mesmos nomes das abas de baixo do app, mais as páginas que não são abas.
+const ROTULOS_ROTA_EXTRA = {
+  "/": "Login / criar conta",
+  "/completar-cadastro": "Completar cadastro",
+  "/carregando": "Carregando",
+  "/dashboard/suporte": "Suporte",
+  "/dashboard/assinatura": "Assinatura",
+};
+
+function rotuloRota(rota) {
+  const daAba = ABAS.find((a) => a.href === rota)?.label;
+  return daAba || ROTULOS_ROTA_EXTRA[rota] || rota;
+}
+
+// Junta os eventos de visita (um por aba aberta) em "acessos": um grupo
+// pra cada vez que a pessoa entrou no app, reunindo tudo que ela navegou
+// enquanto ficou sem ficar mais de 30 minutos parada. É isso que dá pra
+// mostrar "acessou às 14h32, viu Início/Fotos/Wifi" em vez de uma linha
+// por página — o jeito que dá pra contestar quem diz que não acessou.
+const LIMITE_SESSAO_MS = 30 * 60 * 1000;
+
+function agruparAcessos(eventosDesc) {
+  if (!eventosDesc || eventosDesc.length === 0) return [];
+
+  const grupos = [];
+  let grupoAtual = [eventosDesc[0]];
+
+  for (let i = 1; i < eventosDesc.length; i++) {
+    const maisAntigoDoGrupo = grupoAtual[grupoAtual.length - 1];
+    const evento = eventosDesc[i];
+    const gap = new Date(maisAntigoDoGrupo.criado_em) - new Date(evento.criado_em);
+    if (gap <= LIMITE_SESSAO_MS) {
+      grupoAtual.push(evento);
+    } else {
+      grupos.push(grupoAtual);
+      grupoAtual = [evento];
+    }
+  }
+  grupos.push(grupoAtual);
+
+  return grupos.map((grupo) => {
+    const crescente = [...grupo].reverse();
+    const abas = [];
+    crescente.forEach((e) => {
+      const rotulo = rotuloRota(e.rota);
+      if (!abas.includes(rotulo)) abas.push(rotulo);
+    });
+    return {
+      inicio: crescente[0].criado_em,
+      localizacao: grupo.find((e) => e.localizacao)?.localizacao || null,
+      dispositivo: grupo.find((e) => e.dispositivo)?.dispositivo || null,
+      abas,
+    };
+  });
+}
+
 function SecaoClientes({ itens, erroConfig }) {
   const [clientes, setClientes] = useState(itens);
   const [ordenacao, setOrdenacao] = useState("criado_recente");
@@ -1199,6 +1257,10 @@ function ClienteCard({ cliente, onRemovido }) {
   const [confirmarRemocao, setConfirmarRemocao] = useState(false);
   const [removendo, setRemovendo] = useState(false);
   const [erro, setErro] = useState("");
+  const [acessosAbertos, setAcessosAbertos] = useState(false);
+  const [acessos, setAcessos] = useState(null);
+  const [carregandoAcessos, setCarregandoAcessos] = useState(false);
+  const [erroAcessos, setErroAcessos] = useState(false);
   const supabase = createClient();
 
   async function enviarMensagem() {
@@ -1233,6 +1295,27 @@ function ClienteCard({ cliente, onRemovido }) {
       }, 1500);
     }
     setEnviando(false);
+  }
+
+  async function alternarAcessos() {
+    const vaiAbrir = !acessosAbertos;
+    setAcessosAbertos(vaiAbrir);
+    if (vaiAbrir && acessos === null) {
+      setCarregandoAcessos(true);
+      setErroAcessos(false);
+      const { data, error } = await supabase
+        .from("eventos_visita")
+        .select("rota, criado_em, dispositivo, localizacao")
+        .eq("user_id", cliente.id)
+        .order("criado_em", { ascending: false })
+        .limit(500);
+      if (error) {
+        setErroAcessos(true);
+      } else {
+        setAcessos(agruparAcessos(data || []));
+      }
+      setCarregandoAcessos(false);
+    }
   }
 
   async function remover() {
@@ -1286,6 +1369,42 @@ function ClienteCard({ cliente, onRemovido }) {
       <p className="text-[11px] text-muted">
         {cliente.telefone ? `Telefone: ${formatarTelefone(cliente.telefone)}` : "Telefone: não informado"}
       </p>
+
+      <button
+        onClick={alternarAcessos}
+        className="mt-2 flex items-center gap-1 text-[11px] font-medium text-ink"
+      >
+        <ChevronDown size={13} className={`transition-transform ${acessosAbertos ? "rotate-180" : ""}`} />
+        {acessosAbertos ? "Ocultar histórico de acessos" : "Ver histórico de acessos"}
+      </button>
+
+      {acessosAbertos && (
+        <div className="mt-2 flex flex-col gap-2 border-t border-border pt-2">
+          {carregandoAcessos && <p className="text-[11px] text-muted">Carregando...</p>}
+          {erroAcessos && (
+            <p className="text-[11px] text-rust">Não deu pra carregar o histórico. Tente de novo.</p>
+          )}
+          {!carregandoAcessos && !erroAcessos && acessos && acessos.length === 0 && (
+            <p className="text-[11px] text-muted">
+              Nenhum acesso registrado ainda. (Aparelho e localização só ficam registrados pra
+              visitas feitas depois que essa função foi ativada — visitas mais antigas podem
+              aparecer sem essas informações.)
+            </p>
+          )}
+          {!carregandoAcessos && acessos && acessos.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {acessos.map((a, i) => (
+                <div key={i} className="rounded-sm bg-surface2 p-2 text-[11px] text-ink">
+                  <p className="font-semibold">{formatarDataHoraCompleta(a.inicio)}</p>
+                  <p className="text-muted">{a.localizacao || "Localização não disponível"}</p>
+                  <p className="text-muted">{a.dispositivo || "Aparelho não identificado"}</p>
+                  <p className="mt-1 text-muted">Abas: {a.abas.join(", ")}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="mt-3 flex gap-2">
         <button

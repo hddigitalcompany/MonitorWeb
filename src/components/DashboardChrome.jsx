@@ -42,16 +42,38 @@ export function DashboardChrome({ user, telefone, children }) {
   const supabase = createClient();
 
   // Registra cada aba que a pessoa abre — é esse histórico que alimenta o
-  // Painel ao vivo lá na administração (abas mais visitadas, horário de
-  // pico, quem está usando agora etc). Melhor esforço: se falhar, não
+  // Painel ao vivo e a aba Clientes lá na administração (abas mais
+  // visitadas, horário de pico, quem está usando agora, e o histórico de
+  // acessos com aparelho/localização de cada cliente — prova de acesso
+  // pra quando alguém disser que não recebeu o entregável). A localização
+  // é resolvida uma vez só por sessão (guardada no sessionStorage) e
+  // reaproveitada nas trocas de aba seguintes, pra não ficar chamando o
+  // serviço de geolocalização toda hora. Melhor esforço: se falhar, não
   // atrapalha a navegação da pessoa.
   useEffect(() => {
-    supabase
-      .from("eventos_visita")
-      .insert({ user_id: user.id, rota: pathname })
-      .then(({ error }) => {
-        if (error) console.error("[eventos_visita] erro ao registrar visita:", error.message);
-      });
+    let localizacaoConhecida;
+    try {
+      localizacaoConhecida = sessionStorage.getItem("pp_localizacao_sessao") || undefined;
+    } catch {
+      localizacaoConhecida = undefined;
+    }
+
+    fetch("/api/eventos/registrar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rota: pathname, localizacaoConhecida }),
+    })
+      .then((resposta) => (resposta.ok ? resposta.json() : null))
+      .then((dados) => {
+        if (dados?.localizacao && !localizacaoConhecida) {
+          try {
+            sessionStorage.setItem("pp_localizacao_sessao", dados.localizacao);
+          } catch {
+            // sem sessionStorage disponível (ex: navegação privada) — sem problema
+          }
+        }
+      })
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
