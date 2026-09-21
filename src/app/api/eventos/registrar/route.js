@@ -90,7 +90,7 @@ export async function POST(request) {
 
   const { error } = await supabase
     .from("eventos_visita")
-    .insert({ user_id: user.id, rota, dispositivo, localizacao });
+    .insert({ user_id: user.id, rota, dispositivo, localizacao, ip });
 
   if (error) {
     return NextResponse.json({ erro: error.message }, { status: 500 });

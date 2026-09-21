@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
 
 const CHAVE_VISITANTE = "painel_visitante_id";
 
@@ -9,7 +8,11 @@ const CHAVE_VISITANTE = "painel_visitante_id";
 // conta — é o que alimenta "quantas pessoas chegam aqui mas desistem
 // sem criar a conta" no Painel ao vivo (aba Painel ao vivo, admin). Um
 // id aleatório guardado no navegador reconhece visitas repetidas da
-// mesma pessoa, sem juntar nenhum dado pessoal dela.
+// mesma pessoa, sem juntar nenhum dado pessoal dela. O envio passa pelo
+// servidor (em vez de gravar direto no banco) pra capturar o IP de quem
+// visitou — é isso que depois permite saber se esse visitante já tem
+// conta (mesmo IP de uma conta existente) ou se realmente nunca se
+// cadastrou.
 export default function RegistrarVisitaLogin() {
   useEffect(() => {
     let visitanteId;
@@ -23,13 +26,11 @@ export default function RegistrarVisitaLogin() {
       visitanteId = crypto.randomUUID();
     }
 
-    const supabase = createClient();
-    supabase
-      .from("visitas_login")
-      .insert({ visitante_id: visitanteId })
-      .then(({ error }) => {
-        if (error) console.error("[visitas_login] erro ao registrar visita:", error.message);
-      });
+    fetch("/api/visitas-login/registrar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ visitanteId }),
+    }).catch(() => {});
   }, []);
 
   return null;

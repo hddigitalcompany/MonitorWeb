@@ -75,7 +75,7 @@ async function buscarEventosVisita(supabase, idsAdmins, desde) {
     for (let tentativas = 0; tentativas < 200; tentativas++) {
       let consulta = supabase
         .from("eventos_visita")
-        .select("user_id, rota, criado_em")
+        .select("user_id, rota, criado_em, ip")
         .gte("criado_em", desde)
         .order("criado_em", { ascending: true })
         .range(inicio, inicio + tamanhoFatia - 1);
@@ -109,7 +109,7 @@ async function buscarVisitasLogin(supabase, desde) {
     for (let tentativas = 0; tentativas < 200; tentativas++) {
       const { data, error } = await supabase
         .from("visitas_login")
-        .select("id, visitante_id, criado_em")
+        .select("id, visitante_id, criado_em, ip")
         .gte("criado_em", desde)
         .order("criado_em", { ascending: true })
         .range(inicio, inicio + tamanhoFatia - 1);

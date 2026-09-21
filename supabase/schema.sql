@@ -804,3 +804,12 @@ alter table public.conteudo_carregamento_etapas
 alter table public.eventos_visita
   add column if not exists dispositivo text,
   add column if not exists localizacao text;
+
+-- IP de cada visita/evento, pra cruzar visitante anônimo (tela de entrar)
+-- com contas que já existem e assim saber quem provavelmente já é
+-- cliente (só não logou dessa vez) e quem realmente nunca criou conta.
+alter table public.eventos_visita
+  add column if not exists ip text;
+
+alter table public.visitas_login
+  add column if not exists ip text;

@@ -254,6 +254,7 @@ export default function PainelAoVivo({
     const visitasLoginComChave = visitasLogin.map((v) => ({
       visitanteId: v.visitante_id,
       chaveDia: chaveDia(diaDeData(v.criado_em)),
+      ip: v.ip || null,
     }));
     function contarVisitantesLogin(filtro) {
       return new Set(visitasLoginComChave.filter(filtro).map((v) => v.visitanteId)).size;
@@ -269,6 +270,34 @@ export default function PainelAoVivo({
       ontem: Math.max(0, visitantesLogin.ontem - contasNovas.ontem),
       semana: Math.max(0, visitantesLogin.semana - contasNovas.semana),
       mes: Math.max(0, visitantesLogin.mes - contasNovas.mes),
+    };
+
+    // Cruza o IP de cada visitante anônimo (tela de entrar) com o IP de
+    // contas que já existem (eventos_visita, de quem já logou alguma vez).
+    // É uma aproximação: gente na mesma rede (wifi de casa, 4G) pode
+    // coincidir de IP sem ser a mesma pessoa, e quem troca de rede entre
+    // visitas pode não bater mesmo já tendo conta — mas é o mais próximo
+    // que dá pra chegar sem pedir login antes da hora.
+    const ipsDeContas = new Set(eventos.map((e) => e.ip).filter(Boolean));
+    function classificarVisitantesLogin(filtro) {
+      const porVisitante = new Map();
+      visitasLoginComChave.filter(filtro).forEach((v) => {
+        const jaBateu = porVisitante.get(v.visitanteId) || false;
+        porVisitante.set(v.visitanteId, jaBateu || (!!v.ip && ipsDeContas.has(v.ip)));
+      });
+      let comContaProvavel = 0;
+      let semConta = 0;
+      porVisitante.forEach((temConta) => {
+        if (temConta) comContaProvavel += 1;
+        else semConta += 1;
+      });
+      return { comContaProvavel, semConta };
+    }
+    const visitantesPorConta = {
+      hoje: classificarVisitantesLogin((v) => v.chaveDia === chaveHoje),
+      ontem: classificarVisitantesLogin((v) => v.chaveDia === chaveOntem),
+      semana: classificarVisitantesLogin((v) => v.chaveDia >= chaveInicioSemana && v.chaveDia <= chaveHoje),
+      mes: classificarVisitantesLogin((v) => v.chaveDia >= chaveInicioMes && v.chaveDia <= chaveHoje),
     };
 
     return {
@@ -289,6 +318,7 @@ export default function PainelAoVivo({
       mediaDiasAtivos,
       usuariosAtivos30,
       desistiramLogin,
+      visitantesPorConta,
       temVisitasLogin: visitasLogin.length > 0,
     };
   }, [eventos, contasLive, clientes, visitasLogin, agora]);
@@ -333,12 +363,35 @@ export default function PainelAoVivo({
           Ainda sem visitas registradas nessa tela (só conta a partir de agora).
         </p>
       ) : (
-        <div className="mb-6 grid grid-cols-4 gap-2">
-          <MiniStat titulo="Hoje" valor={dados.desistiramLogin.hoje} />
-          <MiniStat titulo="Ontem" valor={dados.desistiramLogin.ontem} />
-          <MiniStat titulo="Semana" valor={dados.desistiramLogin.semana} />
-          <MiniStat titulo="Mês" valor={dados.desistiramLogin.mes} />
-        </div>
+        <>
+          <div className="mb-4 grid grid-cols-4 gap-2">
+            <MiniStat titulo="Hoje" valor={dados.desistiramLogin.hoje} />
+            <MiniStat titulo="Ontem" valor={dados.desistiramLogin.ontem} />
+            <MiniStat titulo="Semana" valor={dados.desistiramLogin.semana} />
+            <MiniStat titulo="Mês" valor={dados.desistiramLogin.mes} />
+          </div>
+
+          <p className="mb-2 text-xs text-muted">
+            Desses que chegaram na tela, por IP: quem provavelmente já tem conta
+          </p>
+          <div className="mb-4 grid grid-cols-4 gap-2">
+            <MiniStat titulo="Hoje" valor={dados.visitantesPorConta.hoje.comContaProvavel} />
+            <MiniStat titulo="Ontem" valor={dados.visitantesPorConta.ontem.comContaProvavel} />
+            <MiniStat titulo="Semana" valor={dados.visitantesPorConta.semana.comContaProvavel} />
+            <MiniStat titulo="Mês" valor={dados.visitantesPorConta.mes.comContaProvavel} />
+          </div>
+
+          <p className="mb-2 text-xs text-muted">E quem realmente não tem conta</p>
+          <div className="mb-2 grid grid-cols-4 gap-2">
+            <MiniStat titulo="Hoje" valor={dados.visitantesPorConta.hoje.semConta} />
+            <MiniStat titulo="Ontem" valor={dados.visitantesPorConta.ontem.semConta} />
+            <MiniStat titulo="Semana" valor={dados.visitantesPorConta.semana.semConta} />
+            <MiniStat titulo="Mês" valor={dados.visitantesPorConta.mes.semConta} />
+          </div>
+          <p className="mb-6 text-[10px] text-muted">
+            Aproximação por IP: rede compartilhada (wifi, 4G) pode confundir; não é 100% certeiro.
+          </p>
+        </>
       )}
 
       <p className="mb-2 text-xs text-muted">Abas mais visitadas (últimos 30 dias)</p>
