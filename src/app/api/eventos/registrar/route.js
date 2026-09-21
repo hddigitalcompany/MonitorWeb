@@ -1,3 +1,4 @@
+import { localizacaoDoIp } from "@/lib/localizacao";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
@@ -31,30 +32,6 @@ function dispositivoDoUserAgent(ua) {
   else if (/Safari\//i.test(ua) && !/Chrome\//i.test(ua)) navegador = "Safari";
 
   return navegador ? `${sistema} - ${navegador}` : sistema;
-}
-
-// Só chama esse serviço externo de geolocalização por IP quando o
-// navegador ainda não mandou uma localização já resolvida antes na mesma
-// sessão (ver DashboardChrome) — assim não estoura o limite de chamadas
-// do serviço gratuito à toa, pedindo de novo a cada aba que a pessoa abre.
-async function localizacaoDoIp(ip) {
-  if (!ip || ip === "127.0.0.1" || ip === "::1") return null;
-  try {
-    const resposta = await fetch(`https://ipapi.co/${ip}/json/`, {
-      signal: AbortSignal.timeout(2500),
-      headers: { "User-Agent": "painel-pessoal" },
-    });
-    if (!resposta.ok) return null;
-    const dados = await resposta.json();
-    if (dados.error) return null;
-    const partes = [dados.city, dados.region, dados.country_name].filter(Boolean);
-    const texto = partes.length > 0 ? partes.join(", ") : null;
-    const lat = typeof dados.latitude === "number" ? dados.latitude : null;
-    const lon = typeof dados.longitude === "number" ? dados.longitude : null;
-    return { texto, lat, lon };
-  } catch {
-    return null;
-  }
 }
 
 export async function POST(request) {
