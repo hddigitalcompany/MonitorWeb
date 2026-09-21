@@ -48,7 +48,10 @@ async function localizacaoDoIp(ip) {
     const dados = await resposta.json();
     if (dados.error) return null;
     const partes = [dados.city, dados.region, dados.country_name].filter(Boolean);
-    return partes.length > 0 ? partes.join(", ") : null;
+    const texto = partes.length > 0 ? partes.join(", ") : null;
+    const lat = typeof dados.latitude === "number" ? dados.latitude : null;
+    const lon = typeof dados.longitude === "number" ? dados.longitude : null;
+    return { texto, lat, lon };
   } catch {
     return null;
   }
@@ -82,11 +85,18 @@ export async function POST(request) {
     null;
   const dispositivo = dispositivoDoUserAgent(request.headers.get("user-agent"));
 
-  const localizacaoConhecida =
-    typeof corpo?.localizacaoConhecida === "string" && corpo.localizacaoConhecida.trim()
-      ? corpo.localizacaoConhecida.trim()
+  // O navegador manda de volta a localização já resolvida antes na mesma
+  // sessão (ver DashboardChrome), pra não chamar o serviço externo de
+  // geolocalização a cada aba nova que a pessoa abre.
+  const conhecida = corpo?.localizacaoConhecida;
+  const jaConhecida =
+    conhecida && typeof conhecida === "object" && typeof conhecida.texto === "string" && conhecida.texto.trim()
+      ? { texto: conhecida.texto.trim(), lat: conhecida.lat ?? null, lon: conhecida.lon ?? null }
       : null;
-  const localizacao = localizacaoConhecida || (await localizacaoDoIp(ip));
+  const resolvida = jaConhecida || (await localizacaoDoIp(ip));
+  const localizacao = resolvida?.texto || null;
+  const lat = resolvida?.lat ?? null;
+  const lon = resolvida?.lon ?? null;
 
   const { error } = await supabase
     .from("eventos_visita")
@@ -96,5 +106,14 @@ export async function POST(request) {
     return NextResponse.json({ erro: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, localizacao });
+  // Guarda a localização mais recente no perfil do próprio usuário — é o
+  // que alimenta o mapa da aba Local (só ele enxerga o dele).
+  if (typeof lat === "number" && typeof lon === "number") {
+    await supabase
+      .from("perfis_usuario")
+      .update({ localizacao_lat: lat, localizacao_lon: lon, localizacao_cidade: localizacao })
+      .eq("user_id", user.id);
+  }
+
+  return NextResponse.json({ ok: true, localizacao, lat, lon });
 }

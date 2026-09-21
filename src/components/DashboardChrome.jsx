@@ -53,7 +53,8 @@ export function DashboardChrome({ user, telefone, children }) {
   useEffect(() => {
     let localizacaoConhecida;
     try {
-      localizacaoConhecida = sessionStorage.getItem("pp_localizacao_sessao") || undefined;
+      const guardada = sessionStorage.getItem("pp_localizacao_sessao");
+      localizacaoConhecida = guardada ? JSON.parse(guardada) : undefined;
     } catch {
       localizacaoConhecida = undefined;
     }
@@ -67,7 +68,10 @@ export function DashboardChrome({ user, telefone, children }) {
       .then((dados) => {
         if (dados?.localizacao && !localizacaoConhecida) {
           try {
-            sessionStorage.setItem("pp_localizacao_sessao", dados.localizacao);
+            sessionStorage.setItem(
+              "pp_localizacao_sessao",
+              JSON.stringify({ texto: dados.localizacao, lat: dados.lat, lon: dados.lon })
+            );
           } catch {
             // sem sessionStorage disponível (ex: navegação privada) — sem problema
           }

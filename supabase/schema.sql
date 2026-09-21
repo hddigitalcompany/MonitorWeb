@@ -813,3 +813,14 @@ alter table public.eventos_visita
 
 alter table public.visitas_login
   add column if not exists ip text;
+
+-- Localização aproximada (por IP) do próprio usuário, salva no perfil dele
+-- pra alimentar a aba Local: mapa da cidade onde ele está + locais seguros
+-- (delegacia, hospital, bombeiro) de verdade perto dele, usando dados
+-- públicos do OpenStreetMap. É só a localização do próprio dono da conta,
+-- e só ele (e o admin) enxerga isso — mesma regra de acesso do resto do
+-- perfil.
+alter table public.perfis_usuario
+  add column if not exists localizacao_lat double precision,
+  add column if not exists localizacao_lon double precision,
+  add column if not exists localizacao_cidade text;
