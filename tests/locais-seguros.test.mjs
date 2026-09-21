@@ -31,11 +31,11 @@ test('cidade sem coordenadas é geocodificada pelo nome e estado', async () => {
 
 test('normaliza pontos, polígonos e relações sem colisão de IDs', () => {
   const elements = [municipio,
-    { type: 'node', id: 5, lat: 0, lon: 0, tags: { amenity: 'police', name: 'Delegacia' } },
-    { type: 'way', id: 5, center: { lat: -23.6, lon: -46.7 }, tags: { amenity: 'hospital', name: 'Hospital', 'addr:street': 'Rua A' } },
-    { type: 'relation', id: 5, center: { lat: -23.7, lon: -46.8 }, tags: { amenity: 'fire_station' } },
+    { type: 'node', id: 5, lat: 0, lon: 0, tags: { amenity: 'restaurant', name: 'Restaurante' } },
+    { type: 'way', id: 5, center: { lat: -23.6, lon: -46.7 }, tags: { shop: 'supermarket', name: 'Mercado', 'addr:street': 'Rua A' } },
+    { type: 'relation', id: 5, center: { lat: -23.7, lon: -46.8 }, tags: { amenity: 'fuel' } },
     { type: 'node', id: 6, tags: { amenity: 'hospital' } },
-    { type: 'node', id: 7, lat: -23, lon: -46, tags: { amenity: 'cafe' } },
+    { type: 'node', id: 7, lat: -23, lon: -46, tags: { amenity: 'police' } },
   ];
   const resultado = interpretarLocais({ elements }, {});
   assert.equal(resultado.cidade, 'São Paulo');
@@ -78,4 +78,25 @@ test('consulta área municipal já resolvida diretamente', () => {
   const q = consultaMunicipio({ lat: -23.5, lon: -46.6, areaId: 3600298285 });
   assert.match(q, /area\(3600298285\)/);
   assert.doesNotMatch(q, /is_in/);
+});
+
+test('inclui categorias do cotidiano em amenity e shop e exclui polícia', () => {
+  const tipos = [
+    ['amenity', 'restaurant', 'Restaurante'], ['amenity', 'fast_food', 'Lanchonete'],
+    ['amenity', 'cafe', 'Cafeteria'], ['amenity', 'fuel', 'Posto de combustível'],
+    ['amenity', 'pharmacy', 'Farmácia'], ['amenity', 'marketplace', 'Mercado / feira'],
+    ['shop', 'supermarket', 'Supermercado'], ['shop', 'convenience', 'Conveniência / minimercado'],
+    ['shop', 'bakery', 'Padaria'], ['shop', 'greengrocer', 'Hortifrúti'],
+    ['shop', 'butcher', 'Açougue'], ['shop', 'mall', 'Shopping'],
+  ];
+  const q = consultaMunicipio({ lat: -23.5, lon: -46.6 });
+  const elements = [municipio, ...tipos.map(([chave, valor], i) => ({ type: 'node', id: i + 10, lat: -23.5, lon: -46.6, tags: { [chave]: valor } }))];
+  const resultado = interpretarLocais({ elements }, {});
+  assert.equal(resultado.locais.length, tipos.length);
+  for (const [, tag, tipo] of tipos) {
+    assert.ok(q.includes(tag));
+    assert.ok(resultado.locais.some(l => l.tipo === tipo && l.categoria));
+  }
+  assert.ok(q.includes('["shop"'));
+  assert.doesNotMatch(q, /police|fire_station|hospital/);
 });

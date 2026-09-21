@@ -102,7 +102,7 @@ export default function MapaLocalizacao({ lat, lon, cidade, locais, selecionado 
   return (
     <div className="mb-4 overflow-hidden rounded-sm border border-border bg-surface">
       <div className="relative isolate h-80 w-full">
-        <div ref={elementoRef} className="h-full w-full" role="region" aria-label={`Mapa dos locais de apoio em ${cidade}`} />
+        <div ref={elementoRef} className="h-full w-full" role="region" aria-label={`Mapa dos locais do dia a dia em ${cidade}`} />
         {!carregado && (
           <div className="absolute inset-0 z-[1000] flex flex-col items-center justify-center gap-3 bg-surface p-4 text-sm text-muted" role="status">
             {erro ? "Não foi possível carregar o mapa." : "Carregando mapa..."}

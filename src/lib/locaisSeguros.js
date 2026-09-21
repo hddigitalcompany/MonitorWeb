@@ -1,4 +1,19 @@
-const ROTULOS = { police: "Delegacia de polícia", hospital: "Hospital", fire_station: "Corpo de bombeiros" };
+const AMENIDADES = {
+  restaurant: ["Restaurante", "Restaurantes e lanchonetes"],
+  fast_food: ["Lanchonete", "Restaurantes e lanchonetes"],
+  cafe: ["Cafeteria", "Cafeterias"],
+  fuel: ["Posto de combustível", "Postos de combustível"],
+  pharmacy: ["Farmácia", "Farmácias"],
+  marketplace: ["Mercado / feira", "Mercados e feiras"],
+};
+const COMERCIOS = {
+  supermarket: ["Supermercado", "Mercados e feiras"],
+  convenience: ["Conveniência / minimercado", "Conveniências"],
+  bakery: ["Padaria", "Padarias"],
+  greengrocer: ["Hortifrúti", "Mercados e feiras"],
+  butcher: ["Açougue", "Mercados e feiras"],
+  mall: ["Shopping", "Shoppings"],
+};
 const SERVIDORES = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter"];
 
 export function coordenadasValidas(lat, lon) {
@@ -14,7 +29,10 @@ export function consultaMunicipio({ lat, lon, areaId }) {
 area.areas["boundary"="administrative"]["admin_level"="8"]->.cidade;`;
   return `[out:json][timeout:12];${area}
 .cidade out tags;
-nwr(area.cidade)["amenity"~"^(police|hospital|fire_station)$"];out center;`;
+(
+  nwr(area.cidade)["amenity"~"^(${Object.keys(AMENIDADES).join("|")})$"];
+  nwr(area.cidade)["shop"~"^(${Object.keys(COMERCIOS).join("|")})$"];
+);out center;`;
 }
 
 // Recupera contas antigas que só têm o nome da cidade no histórico.
@@ -57,12 +75,13 @@ export function interpretarLocais(dados, localizacao) {
   const lon = municipio.center?.lon ?? localizacao.lon;
   if (!coordenadasValidas(lat, lon)) throw new Error("A cidade não tem coordenadas disponíveis.");
   const locais = dados.elements.flatMap((el) => {
-    const tipo = ROTULOS[el.tags?.amenity];
+    const classificacao = AMENIDADES[el.tags?.amenity] || COMERCIOS[el.tags?.shop];
     const latitude = el.lat ?? el.center?.lat;
     const longitude = el.lon ?? el.center?.lon;
-    if (!tipo || !coordenadasValidas(latitude, longitude)) return [];
+    if (!classificacao || !coordenadasValidas(latitude, longitude)) return [];
+    const [tipo, categoria] = classificacao;
     const endereco = [el.tags["addr:street"], el.tags["addr:housenumber"], el.tags["addr:suburb"]].filter(Boolean).join(", ");
-    return [{ id: `${el.type}/${el.id}`, nome: el.tags.name || tipo, tipo, lat: latitude, lon: longitude, endereco }];
+    return [{ id: `${el.type}/${el.id}`, nome: el.tags.name || el.tags.brand || el.tags.operator || tipo, tipo, categoria, lat: latitude, lon: longitude, endereco }];
   }).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR") || a.id.localeCompare(b.id));
   return { lat, lon, cidade: municipio.tags.name || localizacao.texto, locais };
 }
