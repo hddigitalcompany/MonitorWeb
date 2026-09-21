@@ -16,7 +16,7 @@ export default async function LocaisSegurosPage() {
     <div>
       <PageHeader title={texto(textos, "locais_titulo")} subtitle={texto(textos, "locais_subtitulo")} />
 
-      <LocaisDaCidade />
+      <LocaisDaCidade textoCarregamento={texto(textos, "locais_buscando")} />
 
     </div>
   );

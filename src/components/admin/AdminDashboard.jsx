@@ -863,6 +863,7 @@ const GRUPOS_TEXTOS = [
     campos: [
       ["locais_titulo", "Título"],
       ["locais_subtitulo", "Subtítulo"],
+      ["locais_buscando", "Mensagem enquanto busca os locais"],
       ["locais_vazio", "Vazio"],
     ],
   },

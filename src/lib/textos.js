@@ -8,6 +8,7 @@ export const TEXTOS_PADRAO = {
   fotos_titulo: "Fotos",
   fotos_subtitulo: "Fotos motivacionais selecionadas pra você.",
   fotos_vazio: "Nenhuma foto publicada ainda.",
+  locais_buscando: "Buscando locais na sua cidade...",
   locais_titulo: "Locais seguros",
   locais_subtitulo: "Sugestões de lugares na região.",
   locais_vazio: "Nenhuma sugestão publicada ainda.",
