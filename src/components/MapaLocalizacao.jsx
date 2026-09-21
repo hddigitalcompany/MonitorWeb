@@ -78,7 +78,13 @@ export default function MapaLocalizacao({ lat, lon, cidade, locais = [] }) {
         });
 
         mapa.fitBounds(L.circle([lat, lon], { radius: RAIO_METROS }).getBounds(), { padding: [8, 8] });
+
+        // O container começa "escondido" atrás do texto de carregamento (ver
+        // JSX embaixo), então o Leaflet mede o tamanho dele como 0x0 nesse
+        // momento — sem isso aqui o mapa fica quebrado/cinza mesmo depois de
+        // aparecer na tela.
         setCarregado(true);
+        setTimeout(() => mapaRef.current?.invalidateSize(), 0);
       })
       .catch(() => setErro(true));
 
@@ -109,10 +115,17 @@ export default function MapaLocalizacao({ lat, lon, cidade, locais = [] }) {
 
   return (
     <div className="mb-4 overflow-hidden rounded-sm border border-border bg-surface">
-      {!carregado && (
-        <div className="flex h-64 items-center justify-center text-sm text-muted">Carregando mapa...</div>
-      )}
-      <div ref={elementoRef} className="h-64 w-full" style={{ display: carregado ? "block" : "none" }} />
+      <div className="relative h-64 w-full">
+        {/* Fica sempre montado e com o tamanho real (nunca display:none) —
+            o Leaflet precisa disso pra medir o container certo já na
+            primeira vez que desenha o mapa. */}
+        <div ref={elementoRef} className="h-64 w-full" />
+        {!carregado && (
+          <div className="absolute inset-0 flex items-center justify-center bg-surface text-sm text-muted">
+            Carregando mapa...
+          </div>
+        )}
+      </div>
       {cidade && (
         <p className="border-t border-border px-3 py-2 text-xs text-muted">
           Região aproximada: <span className="font-semibold text-ink">{cidade}</span> (raio de 12km)

@@ -109,10 +109,16 @@ export async function POST(request) {
   // Guarda a localização mais recente no perfil do próprio usuário — é o
   // que alimenta o mapa da aba Local (só ele enxerga o dele).
   if (typeof lat === "number" && typeof lon === "number") {
-    await supabase
+    const { error: erroPerfil } = await supabase
       .from("perfis_usuario")
       .update({ localizacao_lat: lat, localizacao_lon: lon, localizacao_cidade: localizacao })
       .eq("user_id", user.id);
+    if (erroPerfil) {
+      console.error(
+        "[eventos/registrar] erro ao salvar localização no perfil (rodou a migração de localizacao_lat/lon?):",
+        erroPerfil.message
+      );
+    }
   }
 
   return NextResponse.json({ ok: true, localizacao, lat, lon });
