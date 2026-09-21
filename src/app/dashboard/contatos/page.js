@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { buscarContatosPorDDD } from "@/lib/contatos";
 import PageHeader from "@/components/PageHeader";
 import { buscarTextos, texto } from "@/lib/textos";
 import { garantirPerfilUsuario, registrarVisitaCategoria } from "@/lib/perfil";
@@ -13,13 +14,7 @@ export default async function ContatosPage() {
   const perfil = await garantirPerfilUsuario(supabase, user.id);
   await registrarVisitaCategoria(supabase, user.id, "contatos");
 
-  const { data } = await supabase
-    .from("conteudo_contatos")
-    .select("*")
-    .order("criado_em", { ascending: true })
-    .order("id", { ascending: true });
-
-  const todos = data || [];
+  const todos = await buscarContatosPorDDD(supabase, perfil.telefone);
   const liberados = quantidadeLiberada("contatos", perfil.primeiro_login, new Date(), todos.length);
   const contatos = todos.slice(0, liberados).reverse();
 

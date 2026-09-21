@@ -63,7 +63,7 @@ export async function registrarAcesso(supabase, userId) {
     console.error("[perfil] erro ao atualizar último acesso:", error.message);
   }
 
-  return { primeiroLogin: perfil.primeiro_login, ultimoAcessoAnterior, ultimoVisto };
+  return { primeiroLogin: perfil.primeiro_login, ultimoAcessoAnterior, ultimoVisto, telefone: perfil.telefone };
 }
 
 // Chamado na abertura de cada aba de conteúdo (fotos, locais, lembretes,

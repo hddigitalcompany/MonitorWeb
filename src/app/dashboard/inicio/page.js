@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { buscarContatosPorDDD } from "@/lib/contatos";
 import PageHeader from "@/components/PageHeader";
 import AtalhosInicio from "@/components/AtalhosInicio";
 import { RefreshCw } from "lucide-react";
@@ -23,10 +24,14 @@ export default async function InicioPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { primeiroLogin, ultimoAcessoAnterior, ultimoVisto } = await registrarAcesso(supabase, user.id);
+  const { primeiroLogin, ultimoAcessoAnterior, ultimoVisto, telefone } = await registrarAcesso(supabase, user.id);
 
   const conteudos = await Promise.all(
-    CATEGORIAS_CONTEUDO.map((c) => supabase.from(c.tabela).select("id"))
+    CATEGORIAS_CONTEUDO.map(async (c) =>
+      c.categoria === "contatos"
+        ? { data: await buscarContatosPorDDD(supabase, telefone) }
+        : await supabase.from(c.tabela).select("id")
+    )
   );
 
   const agora = new Date();

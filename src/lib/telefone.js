@@ -41,3 +41,22 @@ export function formatarTelefoneParcial(valor) {
   }
   return `(${ddd}) ${resto.slice(0, 5)}-${resto.slice(5)}`;
 }
+
+// Aceita telefone nacional com DDD ou prefixo internacional brasileiro.
+// Não interpreta números locais, serviços curtos ou 0800 como DDD.
+export function extrairDDD(valor) {
+  if (typeof valor !== "string") return null;
+  if (valor.trim().startsWith("+") && !/^\+55(?:\D|\d)/.test(valor.trim())) return null;
+  let digitos = apenasDigitos(valor);
+  if ((digitos.length === 12 || digitos.length === 13) && digitos.startsWith("55")) {
+    digitos = digitos.slice(2);
+  }
+  if (!/^[1-9]\d{9,10}$/.test(digitos)) return null;
+  return digitos.slice(0, 2);
+}
+
+export function filtrarContatosPorDDD(contatos, telefone) {
+  const ddd = extrairDDD(telefone);
+  if (!ddd) return [];
+  return contatos.filter((contato) => extrairDDD(contato.numero) === ddd);
+}
