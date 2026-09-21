@@ -1094,6 +1094,7 @@ const ORDENACOES_CLIENTES = [
 function SecaoClientes({ itens, erroConfig }) {
   const [clientes, setClientes] = useState(itens);
   const [ordenacao, setOrdenacao] = useState("criado_recente");
+  const [busca, setBusca] = useState("");
 
   const clientesOrdenados = useMemo(() => {
     const lista = [...clientes];
@@ -1121,6 +1122,20 @@ function SecaoClientes({ itens, erroConfig }) {
     }
   }, [clientes, ordenacao]);
 
+  const clientesFiltrados = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    if (!termo) return clientesOrdenados;
+    const termoDigitos = termo.replace(/\D/g, "");
+    return clientesOrdenados.filter((c) => {
+      const nome = (c.nome || "").toLowerCase();
+      const email = (c.email || "").toLowerCase();
+      const telefone = (c.telefone || "").toString();
+      return (
+        nome.includes(termo) || email.includes(termo) || (termoDigitos && telefone.includes(termoDigitos))
+      );
+    });
+  }, [clientesOrdenados, busca]);
+
   if (erroConfig) {
     return (
       <div className="card">
@@ -1135,10 +1150,19 @@ function SecaoClientes({ itens, erroConfig }) {
 
   return (
     <div className="flex flex-col gap-2">
+      <input
+        type="text"
+        value={busca}
+        onChange={(e) => setBusca(e.target.value)}
+        placeholder="Buscar por nome, e-mail ou telefone..."
+        className="field-input mb-2"
+      />
       <div className="mb-2 flex items-center justify-between gap-2">
         <p className="text-xs text-muted">
           {clientes.length === 0
             ? "Nenhum cliente usando o app ainda."
+            : busca.trim()
+            ? `${clientesFiltrados.length} de ${clientes.length} cliente${clientes.length > 1 ? "s" : ""}`
             : `${clientes.length} cliente${clientes.length > 1 ? "s" : ""} usando o app.`}
         </p>
         <select
@@ -1153,7 +1177,10 @@ function SecaoClientes({ itens, erroConfig }) {
           ))}
         </select>
       </div>
-      {clientesOrdenados.map((cliente) => (
+      {clientesFiltrados.length === 0 && clientes.length > 0 && (
+        <p className="text-sm text-muted">Nenhum cliente encontrado pra essa busca.</p>
+      )}
+      {clientesFiltrados.map((cliente) => (
         <ClienteCard
           key={cliente.id}
           cliente={cliente}
