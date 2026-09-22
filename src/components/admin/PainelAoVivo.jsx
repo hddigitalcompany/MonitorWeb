@@ -111,6 +111,7 @@ function pathAreaSuave(pontos) {
 export default function PainelAoVivo({
   eventosIniciais = [],
   visitasLoginIniciais = [],
+  resultadosLogin = [],
   clientes = [],
   idsAdmins = [],
   erroContas = false,
@@ -268,58 +269,51 @@ export default function PainelAoVivo({
       mes: contarContas((c) => c.chaveDia >= chaveInicioMes && c.chaveDia <= chaveHoje),
     };
 
-    // "Desistiu" = pessoa diferente (contada pelo id salvo no navegador
-    // dela) que chegou na tela de entrar/criar conta naquele período, sem
-    // que o número de contas novas criadas nesse mesmo período alcance
-    // esse tanto de gente — uma aproximação (não dá pra saber com certeza
-    // QUEM desistiu), mas dá a ideia de quanto está vazando ali.
+    // Cada navegador recebe um identificador anônimo. Assim várias aberturas
+    // da tela pela mesma pessoa contam como uma única visita no período.
     const visitasLoginComChave = visitasLogin.map((v) => ({
       visitanteId: v.visitante_id,
       chaveDia: chaveDia(diaDeData(v.criado_em)),
       ip: v.ip || null,
     }));
-    function contarVisitantesLogin(filtro) {
-      return new Set(visitasLoginComChave.filter(filtro).map((v) => v.visitanteId)).size;
-    }
-    const visitantesLogin = {
-      hoje: contarVisitantesLogin((v) => v.chaveDia === chaveHoje),
-      ontem: contarVisitantesLogin((v) => v.chaveDia === chaveOntem),
-      semana: contarVisitantesLogin((v) => v.chaveDia >= chaveInicioSemana && v.chaveDia <= chaveHoje),
-      mes: contarVisitantesLogin((v) => v.chaveDia >= chaveInicioMes && v.chaveDia <= chaveHoje),
-    };
-    const desistiramLogin = {
-      hoje: Math.max(0, visitantesLogin.hoje - contasNovas.hoje),
-      ontem: Math.max(0, visitantesLogin.ontem - contasNovas.ontem),
-      semana: Math.max(0, visitantesLogin.semana - contasNovas.semana),
-      mes: Math.max(0, visitantesLogin.mes - contasNovas.mes),
-    };
+    const resultadosComChave = resultadosLogin.map((r) => ({
+      ...r,
+      chaveDia: chaveDia(diaDeData(new Date(r.criado_em))),
+    }));
 
-    // Cruza o IP de cada visitante anônimo (tela de entrar) com o IP de
-    // contas que já existem (eventos_visita, de quem já logou alguma vez).
-    // É uma aproximação: gente na mesma rede (wifi de casa, 4G) pode
-    // coincidir de IP sem ser a mesma pessoa, e quem troca de rede entre
-    // visitas pode não bater mesmo já tendo conta — mas é o mais próximo
-    // que dá pra chegar sem pedir login antes da hora.
+    // Um resultado gravado para o mesmo visitante prova que ele terminou o
+    // formulário e ficou vinculado a uma conta. Para registros anteriores a
+    // essa medição, o IP conhecido de uma conta é usado como aproximação.
     const ipsDeContas = new Set(eventos.map((e) => e.ip).filter(Boolean));
-    function classificarVisitantesLogin(filtro) {
+    function calcularFunilLogin(filtro) {
+      const concluidos = new Set(
+        resultadosComChave.filter(filtro).map((r) => r.visitante_id)
+      );
       const porVisitante = new Map();
       visitasLoginComChave.filter(filtro).forEach((v) => {
-        const jaBateu = porVisitante.get(v.visitanteId) || false;
-        porVisitante.set(v.visitanteId, jaBateu || (!!v.ip && ipsDeContas.has(v.ip)));
+        const jaTemConta = porVisitante.get(v.visitanteId) || concluidos.has(v.visitanteId);
+        porVisitante.set(
+          v.visitanteId,
+          jaTemConta || (!!v.ip && ipsDeContas.has(v.ip))
+        );
       });
-      let comContaProvavel = 0;
-      let semConta = 0;
+      let visitasComConta = 0;
+      let visitasSemCriarConta = 0;
       porVisitante.forEach((temConta) => {
-        if (temConta) comContaProvavel += 1;
-        else semConta += 1;
+        if (temConta) visitasComConta += 1;
+        else visitasSemCriarConta += 1;
       });
-      return { comContaProvavel, semConta };
+      return {
+        total: porVisitante.size,
+        visitasComConta,
+        visitasSemCriarConta,
+      };
     }
-    const visitantesPorConta = {
-      hoje: classificarVisitantesLogin((v) => v.chaveDia === chaveHoje),
-      ontem: classificarVisitantesLogin((v) => v.chaveDia === chaveOntem),
-      semana: classificarVisitantesLogin((v) => v.chaveDia >= chaveInicioSemana && v.chaveDia <= chaveHoje),
-      mes: classificarVisitantesLogin((v) => v.chaveDia >= chaveInicioMes && v.chaveDia <= chaveHoje),
+    const funilLogin = {
+      hoje: calcularFunilLogin((v) => v.chaveDia === chaveHoje),
+      ontem: calcularFunilLogin((v) => v.chaveDia === chaveOntem),
+      semana: calcularFunilLogin((v) => v.chaveDia >= chaveInicioSemana && v.chaveDia <= chaveHoje),
+      mes: calcularFunilLogin((v) => v.chaveDia >= chaveInicioMes && v.chaveDia <= chaveHoje),
     };
 
     return {
@@ -339,11 +333,10 @@ export default function PainelAoVivo({
       maxBucket,
       mediaDiasAtivos,
       usuariosAtivos30,
-      desistiramLogin,
-      visitantesPorConta,
+      funilLogin,
       temVisitasLogin: visitasLogin.length > 0,
     };
-  }, [eventos, contasLive, clientes, visitasLogin, agora]);
+  }, [eventos, contasLive, clientes, visitasLogin, resultadosLogin, agora]);
 
   return (
     <div>
@@ -391,7 +384,7 @@ export default function PainelAoVivo({
         </div>
       )}
 
-      <p className="mb-2 text-xs text-muted">Diferença entre visitantes da tela de entrada e contas novas</p>
+      <p className="mb-2 text-xs text-muted">Visitas à tela de login</p>
       {!dados.temVisitasLogin ? (
         <p className="mb-6 text-xs text-muted">
           Ainda sem visitas registradas nessa tela (só conta a partir de agora).
@@ -399,36 +392,35 @@ export default function PainelAoVivo({
       ) : (
         <>
           <div className="mb-4 grid grid-cols-4 gap-2">
-            <MiniStat titulo="Hoje" valor={dados.desistiramLogin.hoje} />
-            <MiniStat titulo="Ontem" valor={dados.desistiramLogin.ontem} />
-            <MiniStat titulo="Semana" valor={dados.desistiramLogin.semana} />
-            <MiniStat titulo="Mês" valor={dados.desistiramLogin.mes} />
+            <MiniStat titulo="Hoje" valor={dados.funilLogin.hoje.total} />
+            <MiniStat titulo="Ontem" valor={dados.funilLogin.ontem.total} />
+            <MiniStat titulo="Semana" valor={dados.funilLogin.semana.total} />
+            <MiniStat titulo="Mês" valor={dados.funilLogin.mes.total} />
           </div>
           <p className="mb-4 text-[10px] text-muted">
-            Cálculo aproximado: visitantes diferentes menos contas novas do período. Não identifica
-            quais pessoas criaram conta e não significa que todas as demais desistiram.
+            Cada navegador conta uma vez por período, mesmo que abra a tela várias vezes.
           </p>
 
           <p className="mb-2 text-xs text-muted">
-            Visitantes cujo IP também apareceu em uma conta existente
+            Visitas que já têm conta
           </p>
           <div className="mb-4 grid grid-cols-4 gap-2">
-            <MiniStat titulo="Hoje" valor={dados.visitantesPorConta.hoje.comContaProvavel} />
-            <MiniStat titulo="Ontem" valor={dados.visitantesPorConta.ontem.comContaProvavel} />
-            <MiniStat titulo="Semana" valor={dados.visitantesPorConta.semana.comContaProvavel} />
-            <MiniStat titulo="Mês" valor={dados.visitantesPorConta.mes.comContaProvavel} />
+            <MiniStat titulo="Hoje" valor={dados.funilLogin.hoje.visitasComConta} />
+            <MiniStat titulo="Ontem" valor={dados.funilLogin.ontem.visitasComConta} />
+            <MiniStat titulo="Semana" valor={dados.funilLogin.semana.visitasComConta} />
+            <MiniStat titulo="Mês" valor={dados.funilLogin.mes.visitasComConta} />
           </div>
 
-          <p className="mb-2 text-xs text-muted">Visitantes sem correspondência de IP com uma conta</p>
+          <p className="mb-2 text-xs text-muted">Visitas que saíram sem criar conta</p>
           <div className="mb-2 grid grid-cols-4 gap-2">
-            <MiniStat titulo="Hoje" valor={dados.visitantesPorConta.hoje.semConta} />
-            <MiniStat titulo="Ontem" valor={dados.visitantesPorConta.ontem.semConta} />
-            <MiniStat titulo="Semana" valor={dados.visitantesPorConta.semana.semConta} />
-            <MiniStat titulo="Mês" valor={dados.visitantesPorConta.mes.semConta} />
+            <MiniStat titulo="Hoje" valor={dados.funilLogin.hoje.visitasSemCriarConta} />
+            <MiniStat titulo="Ontem" valor={dados.funilLogin.ontem.visitasSemCriarConta} />
+            <MiniStat titulo="Semana" valor={dados.funilLogin.semana.visitasSemCriarConta} />
+            <MiniStat titulo="Mês" valor={dados.funilLogin.mes.visitasSemCriarConta} />
           </div>
           <p className="mb-6 text-[10px] text-muted">
-            Os dois grupos acima somam todos os visitantes da tela de entrada. A classificação por
-            IP é aproximada: wifi e 4G compartilhados ou troca de rede podem alterar o resultado.
+            Visitas com conta + visitas que saíram sem criar = total de visitas à tela. A vinculação
+            passa a ser registrada diretamente; dados antigos continuam usando a aproximação por IP.
           </p>
         </>
       )}

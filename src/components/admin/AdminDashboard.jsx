@@ -88,6 +88,7 @@ export default function AdminDashboard({ dadosIniciais }) {
           <PainelAoVivo
             eventosIniciais={dadosIniciais.eventosVisita}
             visitasLoginIniciais={dadosIniciais.visitasLogin}
+            resultadosLogin={dadosIniciais.resultadosLogin}
             clientes={dadosIniciais.clientes}
             idsAdmins={dadosIniciais.idsAdmins}
             erroContas={dadosIniciais.erroClientes}

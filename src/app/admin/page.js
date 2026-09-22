@@ -55,10 +55,24 @@ async function buscarClientesEUsuarios(supabase, idsAdminsArray) {
       }))
       .sort((a, b) => (a.nome || a.email).localeCompare(b.nome || b.email));
 
-    return { clientes, mapaUsuarios, erroConfig: false };
+    const resultadosLogin = usuarios.flatMap((u) => {
+      const historico = u.app_metadata?.historico_login_visitante;
+      if (!Array.isArray(historico)) return [];
+      return historico
+        .filter(
+          (item) =>
+            item &&
+            typeof item.visitante_id === "string" &&
+            (item.resultado === "conta_criada" || item.resultado === "conta_existente") &&
+            typeof item.criado_em === "string"
+        )
+        .map((item) => ({ ...item, user_id: u.id }));
+    });
+
+    return { clientes, mapaUsuarios, resultadosLogin, erroConfig: false };
   } catch (err) {
     console.error('[admin/clientes] erro ao buscar clientes:', err?.message || err);
-    return { clientes: [], mapaUsuarios: new Map(), erroConfig: true };
+    return { clientes: [], mapaUsuarios: new Map(), resultadosLogin: [], erroConfig: true };
   }
 }
 
@@ -171,7 +185,7 @@ export default async function AdminPage() {
     perfis,
     conversasDemo,
     carregamentoEtapas,
-    { clientes, mapaUsuarios, erroConfig },
+    { clientes, mapaUsuarios, resultadosLogin, erroConfig },
     eventosVisita,
     visitasLogin,
   ] = await Promise.all([
@@ -244,6 +258,7 @@ export default async function AdminPage() {
         reembolsos,
         eventosVisita,
         visitasLogin,
+        resultadosLogin,
         idsAdmins,
         conversasDemo: conversasDemo.data || [],
         carregamentoEtapas: carregamentoEtapas.data || [],

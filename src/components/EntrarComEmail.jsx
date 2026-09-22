@@ -23,7 +23,14 @@ export default function EntrarComEmail() {
     setCarregando(true);
     setErro("");
 
-    const resultado = await entrarComEmail(email);
+    let visitanteId = null;
+    try {
+      visitanteId = localStorage.getItem("painel_visitante_id");
+    } catch {
+      // O login continua funcionando se o navegador bloquear o armazenamento.
+    }
+
+    const resultado = await entrarComEmail(email, visitanteId);
 
     if (resultado?.erro) {
       setCarregando(false);
