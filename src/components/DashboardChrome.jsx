@@ -7,7 +7,6 @@ import { createClient } from "@/lib/supabase/client";
 import PerfilModal from "@/components/PerfilModal";
 import { formatarTelefone } from "@/lib/telefone";
 import {
-  Settings,
   Home,
   Image as ImageIcon,
   MapPin,
@@ -92,10 +91,10 @@ export function DashboardChrome({ user, telefone, children }) {
       <header className="flex shrink-0 items-center gap-3 border-b border-border bg-surface px-4 py-3">
         <button
           onClick={() => setMenuAberto(true)}
-          aria-label="Abrir menu"
+          aria-label="Abrir menu de suporte"
           className="p-1 text-ink"
         >
-          <Settings size={21} strokeWidth={1.75} />
+          <Headset size={21} strokeWidth={1.75} />
         </button>
         <p className="flex items-center gap-1.5 font-extrabold tracking-tight text-lg text-ink">
           <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber">
