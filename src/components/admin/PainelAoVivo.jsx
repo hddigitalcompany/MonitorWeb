@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { RefreshCw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 const FUSO_BR = "America/Sao_Paulo";
@@ -113,6 +115,8 @@ export default function PainelAoVivo({
   idsAdmins = [],
   erroContas = false,
 }) {
+  const router = useRouter();
+  const [atualizando, iniciarAtualizacao] = useTransition();
   const [eventos, setEventos] = useState(() =>
     eventosIniciais.map((e) => ({ ...e, criado_em: new Date(e.criado_em) }))
   );
@@ -122,6 +126,24 @@ export default function PainelAoVivo({
   const [contasLive, setContasLive] = useState([]);
   const [agora, setAgora] = useState(() => new Date());
   const [horaSelecionada, setHoraSelecionada] = useState(null);
+
+  // router.refresh() traz um retrato novo do servidor. Como estes dados
+  // ficam em estado local para receber o Realtime, sincronizamos as novas
+  // propriedades quando a atualização manual terminar.
+  useEffect(() => {
+    setEventos(eventosIniciais.map((e) => ({ ...e, criado_em: new Date(e.criado_em) })));
+  }, [eventosIniciais]);
+
+  useEffect(() => {
+    setVisitasLogin(visitasLoginIniciais.map((v) => ({ ...v, criado_em: new Date(v.criado_em) })));
+  }, [visitasLoginIniciais]);
+
+  function atualizarDados() {
+    iniciarAtualizacao(() => {
+      router.refresh();
+      setAgora(new Date());
+    });
+  }
 
   // Relógio próprio: mesmo sem nenhuma visita nova chegando, os números por
   // tempo (tipo "agora" e a virada do dia) precisam continuar corretos.
@@ -325,6 +347,18 @@ export default function PainelAoVivo({
 
   return (
     <div>
+      <div className="mb-4 flex justify-end">
+        <button
+          type="button"
+          onClick={atualizarDados}
+          disabled={atualizando}
+          className="btn-secondary"
+        >
+          <RefreshCw size={15} className={atualizando ? "animate-spin" : ""} />
+          {atualizando ? "Atualizando..." : "Atualizar dados"}
+        </button>
+      </div>
+
       <div className="mb-6 flex items-center gap-2.5 rounded-sm bg-amber p-4">
         <span className="relative flex h-2.5 w-2.5 shrink-0">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-ink/50" />
@@ -357,7 +391,7 @@ export default function PainelAoVivo({
         </div>
       )}
 
-      <p className="mb-2 text-xs text-muted">Chegaram na tela de entrar mas não criaram conta</p>
+      <p className="mb-2 text-xs text-muted">Diferença entre visitantes da tela de entrada e contas novas</p>
       {!dados.temVisitasLogin ? (
         <p className="mb-6 text-xs text-muted">
           Ainda sem visitas registradas nessa tela (só conta a partir de agora).
@@ -370,9 +404,13 @@ export default function PainelAoVivo({
             <MiniStat titulo="Semana" valor={dados.desistiramLogin.semana} />
             <MiniStat titulo="Mês" valor={dados.desistiramLogin.mes} />
           </div>
+          <p className="mb-4 text-[10px] text-muted">
+            Cálculo aproximado: visitantes diferentes menos contas novas do período. Não identifica
+            quais pessoas criaram conta e não significa que todas as demais desistiram.
+          </p>
 
           <p className="mb-2 text-xs text-muted">
-            Desses que chegaram na tela, por IP: quem provavelmente já tem conta
+            Visitantes cujo IP também apareceu em uma conta existente
           </p>
           <div className="mb-4 grid grid-cols-4 gap-2">
             <MiniStat titulo="Hoje" valor={dados.visitantesPorConta.hoje.comContaProvavel} />
@@ -381,7 +419,7 @@ export default function PainelAoVivo({
             <MiniStat titulo="Mês" valor={dados.visitantesPorConta.mes.comContaProvavel} />
           </div>
 
-          <p className="mb-2 text-xs text-muted">E quem realmente não tem conta</p>
+          <p className="mb-2 text-xs text-muted">Visitantes sem correspondência de IP com uma conta</p>
           <div className="mb-2 grid grid-cols-4 gap-2">
             <MiniStat titulo="Hoje" valor={dados.visitantesPorConta.hoje.semConta} />
             <MiniStat titulo="Ontem" valor={dados.visitantesPorConta.ontem.semConta} />
@@ -389,7 +427,8 @@ export default function PainelAoVivo({
             <MiniStat titulo="Mês" valor={dados.visitantesPorConta.mes.semConta} />
           </div>
           <p className="mb-6 text-[10px] text-muted">
-            Aproximação por IP: rede compartilhada (wifi, 4G) pode confundir; não é 100% certeiro.
+            Os dois grupos acima somam todos os visitantes da tela de entrada. A classificação por
+            IP é aproximada: wifi e 4G compartilhados ou troca de rede podem alterar o resultado.
           </p>
         </>
       )}
